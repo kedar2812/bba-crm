@@ -1,0 +1,8 @@
+Options -Indexes
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  # Every request under /api goes through the front controller.
+  # lib/, routes/ and vendor/ files are therefore never executed or served directly.
+  RewriteRule ^index\.php$ - [L]
+  RewriteRule ^ index.php [L]
+</IfModule>

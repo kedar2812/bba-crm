@@ -1,0 +1,15 @@
+node_modules/
+dist/
+hosting-details/
+.netrc*
+server/api/_private/config.secrets.php
+server/api/_private/data/
+server/api/_private/sessions/
+server/api/_private/logs/
+server/api/_private/cache/
+server/api/_private/uploads/
+server/uploads/avatars/*
+!server/uploads/avatars/.htaccess
+FTP-DEPLOY-GUIDE-FOR-CLAUDE.txt
+server/uploads/ig/
+BBA_Networking_App_DPR.md

@@ -1,0 +1,171 @@
+@import '@fontsource-variable/inter/wght.css';
+@import '@fontsource/sora/latin-600.css';
+@import '@fontsource/sora/latin-700.css';
+@import '@fontsource/sora/latin-800.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ink-950: #0b0b0b;
+  --gold-500: #e0a82e;
+  --cream-100: #fbf6ec;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --tabbar-h: 64px;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    @apply bg-cream-100 text-ink-950 font-sans;
+    font-size: 16px;
+    line-height: 1.5;
+    overscroll-behavior-y: none;
+  }
+  h1, h2, h3 {
+    font-family: Sora, 'Inter Variable', system-ui, sans-serif;
+    letter-spacing: -0.02em;
+  }
+  input, textarea, select, button {
+    font: inherit;
+  }
+  /* 16px+ inputs stop iOS Safari from zooming on focus */
+  input, textarea, select {
+    font-size: 16px;
+  }
+  ::selection {
+    background: #f2cf6b;
+    color: #0b0b0b;
+  }
+  :focus-visible {
+    outline: 2px solid #e0a82e;
+    outline-offset: 2px;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white border border-line rounded-card shadow-card;
+  }
+  .field {
+    @apply w-full h-12 rounded-field border border-line bg-white px-3.5 text-[16px] text-ink-950 placeholder:text-ink-400
+      transition-[border-color,box-shadow] duration-150 outline-none
+      focus:border-gold-500 focus:ring-4 focus:ring-gold-500/15;
+  }
+  .field-error {
+    @apply border-danger focus:border-danger focus:ring-danger/15;
+  }
+  .label {
+    @apply block text-[13px] font-semibold text-ink-800 mb-1.5;
+  }
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.14em];
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full border text-[13px] font-medium whitespace-nowrap
+      transition-colors duration-150 select-none;
+  }
+  .chip-on {
+    @apply bg-ink-950 text-white border-ink-950;
+  }
+  .chip-off {
+    @apply bg-white text-ink-800 border-line hover:border-ink-300;
+  }
+  .tag {
+    @apply inline-flex items-center rounded-full bg-cream-200/70 text-ink-800 px-2.5 py-1 text-[12px] font-medium;
+  }
+  .page {
+    @apply mx-auto w-full max-w-5xl px-4 sm:px-6 pt-4 pb-6;
+  }
+  .page-title {
+    @apply text-[22px] sm:text-[28px] font-bold leading-tight;
+  }
+  .scroll-x {
+    @apply flex gap-2 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0;
+    scrollbar-width: none;
+  }
+  .scroll-x::-webkit-scrollbar {
+    display: none;
+  }
+  .glass {
+    background: rgba(255, 253, 248, 0.82);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+  }
+  .glass-dark {
+    background: rgba(11, 11, 11, 0.86);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    backdrop-filter: saturate(180%) blur(20px);
+  }
+  .skeleton {
+    @apply rounded-lg bg-cream-200;
+    background-image: linear-gradient(90deg, rgba(255, 255, 255, 0) 0, rgba(255, 255, 255, 0.6) 50%, rgba(255, 255, 255, 0) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+  }
+  .gold-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .gold-shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(110deg, transparent 30%, rgba(242, 207, 107, 0.55) 50%, transparent 70%);
+    transform: translateX(-100%);
+    animation: sweep 1.1s ease-out 1 forwards;
+    pointer-events: none;
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@keyframes sweep {
+  to { transform: translateX(100%); }
+}
+
+/* App chrome spacing: room for the bottom tab bar + iOS home indicator */
+.pb-tabbar {
+  padding-bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 24px);
+}
+@media (min-width: 1024px) {
+  .pb-tabbar { padding-bottom: 32px; }
+}
+.pt-safe { padding-top: var(--safe-top); }
+.pb-safe { padding-bottom: var(--safe-bottom); }
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
+  .gold-shimmer::after { animation: none; display: none; }
+  * { scroll-behavior: auto !important; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass { background: #fffdf8; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .glass-dark { background: #0b0b0b; backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
+
+/* Date/time inputs: keep native pickers but match our field height on iOS */
+input[type='date'], input[type='datetime-local'], input[type='time'] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-height: 48px;
+  line-height: 48px;
+}
+input[type='date']::-webkit-date-and-time-value,
+input[type='datetime-local']::-webkit-date-and-time-value,
+input[type='time']::-webkit-date-and-time-value {
+  text-align: left;
+}

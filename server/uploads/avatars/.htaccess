@@ -1,0 +1,9 @@
+# Uploaded images only — nothing here may ever execute.
+Options -ExecCGI -Indexes
+<FilesMatch "\.(php|phtml|phar|php\d|pht|cgi|pl|py|sh)$">
+  Require all denied
+</FilesMatch>
+<IfModule mod_headers.c>
+  Header set Cache-Control "public, max-age=2592000"
+  Header set X-Content-Type-Options "nosniff"
+</IfModule>
