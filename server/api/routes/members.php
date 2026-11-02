@@ -74,10 +74,11 @@ route('GET', 'members', function () {
 });
 
 /** Lightweight list for pickers. */
-route('GET', 'members/picker', function () {
-    $me = require_member();
+/** Active members for the searchable picker (admins are not members), minus one id. */
+function member_picker_rows($exceptId)
+{
     $rows = all("SELECT m.id, m.full_name, m.business_name, m.photo_path, m.city, m.category_other, c.name AS category_name
-        FROM members m LEFT JOIN categories c ON c.id = m.category_id WHERE m.status = 'approved' AND m.role = 'member' AND m.id <> ? ORDER BY m.full_name", array($me['id']));
+        FROM members m LEFT JOIN categories c ON c.id = m.category_id WHERE m.status = 'approved' AND m.role = 'member' AND m.id <> ? ORDER BY m.full_name", array((int) $exceptId));
     $out = array();
     foreach ($rows as $r) {
         $out[] = array(
@@ -88,7 +89,17 @@ route('GET', 'members/picker', function () {
             'category' => $r['category_other'] ? $r['category_other'] : $r['category_name'],
         );
     }
-    ok($out);
+    return $out;
+}
+
+route('GET', 'members/picker', function () {
+    $me = require_member();
+    ok(member_picker_rows($me['id']));
+});
+
+route('GET', 'admin/members/picker', function () {
+    require_admin();
+    ok(member_picker_rows(0));
 });
 
 route('GET', 'members/view', function () {

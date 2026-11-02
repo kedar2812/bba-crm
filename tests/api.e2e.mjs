@@ -353,6 +353,41 @@ async function main() {
   check('admin member page: totals match the member dashboard', Math.round(av.stats.business_received) === Math.round(dashAll.business_received) && Math.round(av.stats.business_given) === Math.round(dashAll.business_given), [av.stats, dashAll])
   const avDay = (await admin.get('admin/members/view', { id: meB.id, from: today, to: today })).data
   check('admin member page follows a custom range', avDay.from === today && avDay.business_received.every((x) => x.won_date === today) && Math.round(avDay.stats.business_received) === Math.round(dashDay.business_received), [avDay.from, avDay.stats.business_received, dashDay.business_received])
+  // Admin adds business and 121s on members' behalf
+  r = await admin.get('admin/members/picker')
+  check('admin member picker works and lists only members', r.ok && r.data.some((x) => x.id === meA.id) && !r.data.some((x) => x.full_name === 'Kedar Admin'), r.error)
+  r = await A.get('admin/members/picker')
+  check('members cannot use the admin picker (403)', r.status === 403, r)
+  r = await A.post('admin/records/add-business', { giver_id: meA.id, receiver_id: meB.id, value: 1000, requirement: 'X' })
+  check('members cannot add business as admin (403)', r.status === 403, r)
+  r = await admin.post('admin/records/add-business', { giver_id: meA.id, receiver_id: meA.id, value: 1000, requirement: 'X' })
+  check('add business: two different members required', !r.ok && !!r.error.fields?.receiver_id, r)
+  r = await admin.post('admin/records/add-business', { giver_id: meA.id, receiver_id: meB.id, value: 0, requirement: 'X' })
+  check('add business: value required', !r.ok && !!r.error.fields?.value, r)
+  r = await admin.post('admin/records/add-business', { giver_id: meA.id, receiver_id: meB.id, value: 1000, requirement: 'X', won_date: '2999-01-01' })
+  check('add business: no future dates', !r.ok && !!r.error.fields?.won_date, r)
+  const ovBefore = (await admin.get('admin/overview', { from: '2000-01-01', to: '2999-12-31' })).data.stats.business_closed
+  const recvBefore = (await B.get('dashboard', { period: 'all' })).data.cards.business_received
+  const givenBefore = (await A.get('dashboard', { period: 'all' })).data.cards.business_given
+  r = await admin.post('admin/records/add-business', { giver_id: meA.id, receiver_id: meB.id, value: '3,000', requirement: 'Admin-added flooring', won_date: today })
+  check('admin adds business', r.ok && /^BBA-R-/.test(r.data.code), r)
+  const addedCode = r.data?.code
+  check('admin business counts once in association totals', Math.round((await admin.get('admin/overview', { from: '2000-01-01', to: '2999-12-31' })).data.stats.business_closed - ovBefore) === 3000)
+  check('…as received for the receiver', Math.round((await B.get('dashboard', { period: 'all' })).data.cards.business_received - recvBefore) === 3000)
+  check('…and generated for the giver', Math.round((await A.get('dashboard', { period: 'all' })).data.cards.business_given - givenBefore) === 3000)
+  check('…and only on the right side of Business Closed', (await B.get('referrals', { box: 'closed', side: 'received', period: 'all' })).data.items.some((x) => x.code === addedCode) && !(await B.get('referrals', { box: 'closed', side: 'given', period: 'all' })).data.items.some((x) => x.code === addedCode))
+  check('both members are notified', (await A.get('notifications')).data.some((n) => n.link === '/app/referrals/' + addedCode) && (await B.get('notifications')).data.some((n) => n.link === '/app/referrals/' + addedCode))
+  check('either member can dispute admin-added business', (await B.get('referrals/view', { code: addedCode })).data.can.dispute === true)
+  r = await admin.post('admin/records/add-121', { member_a: meA.id, member_b: meB.id, meeting_at: '2999-01-01T10:00' })
+  check('add 121: no future meetings', !r.ok && !!r.error.fields?.meeting_at, r)
+  const onesA0 = (await A.get('dashboard', { period: 'all' })).data.cards.ones_done
+  const onesB0 = (await B.get('dashboard', { period: 'all' })).data.cards.ones_done
+  r = await admin.post('admin/records/add-121', { member_a: meA.id, member_b: meB.id, meeting_at: at, mode: 'online', business_discussed: 'Flooring leads' })
+  check('admin adds a 121', r.ok && /^BBA-M-/.test(r.data.code), r)
+  const added121 = r.data?.id
+  check('admin 121 counts right away for both members', (await A.get('dashboard', { period: 'all' })).data.cards.ones_done - onesA0 === 1 && (await B.get('dashboard', { period: 'all' })).data.cards.ones_done - onesB0 === 1)
+  const o121 = (await B.get('121s')).data.items.find((x) => x.id === added121)
+  check('admin 121 shows as completed and confirmed by an admin', o121?.status === 'completed' && o121.force_confirmed === true, o121)
   const legacy = (await B.get('referrals', { box: 'closed' })).data
   check('Business Closed without a side still lists both (older app)', legacy.items.length >= closedR.items.length, legacy.total)
 

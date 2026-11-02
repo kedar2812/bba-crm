@@ -503,6 +503,85 @@ route('POST', 'admin/records/resolve-dispute', function () {
     ok(true);
 });
 
+/**
+ * Admin records business on members' behalf: one shared row, counted once, exactly like a
+ * thank-you note. Both members are notified and either can dispute it.
+ */
+route('POST', 'admin/records/add-business', function () {
+    $me = require_admin();
+    $v = new V();
+    $giverId = $v->int('giver_id', 'Who gave the business');
+    $receiverId = $v->int('receiver_id', 'Who received the business');
+    $value = $v->money('value', 'Business value');
+    $req = $v->str('requirement', 'What it was for', true, 255);
+    $client = $v->str('client_name', 'Client', false, 150);
+    $date = $v->date('won_date', 'Date', false);
+    $note = $v->str('note', 'Note', false, 2000);
+    $v->done();
+    if ($value !== null && $value <= 0) {
+        fail('validation', 'Enter the business value.', 422, array('value' => 'Enter the business value.'));
+    }
+    $giver = approved_member_or_fail($giverId, 'giver_id');
+    $receiver = approved_member_or_fail($receiverId, 'receiver_id', $giver['id'], 'Pick two different members.');
+    $date = $date ? $date : today();
+    if ($date > today()) {
+        fail('validation', 'Date cannot be in the future.', 422, array('won_date' => 'Cannot be in the future.'));
+    }
+    $id = insert('referrals', array(
+        'type' => 'direct',
+        'giver_id' => $giver['id'],
+        'receiver_id' => $receiver['id'],
+        'created_by' => $me['id'],
+        'client_name' => $client ? $client : '',
+        'requirement' => $req,
+        'estimated_value' => $value,
+        'referral_date' => $date,
+        'status' => 'won',
+        'final_value' => $value,
+        'won_date' => $date,
+        'thank_you_note' => $note,
+    ));
+    $code = sprintf('BBA-R-%06d', $id);
+    q('UPDATE referrals SET code = ? WHERE id = ?', array($code, $id));
+    referral_event($id, 'created', 'Added by an admin' . ($note ? ': ' . $note : ''));
+    audit('business_added', 'referral', $id, null, array('code' => $code, 'giver_id' => (int) $giver['id'], 'receiver_id' => (int) $receiver['id'], 'value' => $value, 'won_date' => $date));
+    $what = money_fmt($value) . ' · ' . $req;
+    notify($receiver['id'], 'referral_won', 'Admin recorded business you received from ' . first_name($giver['full_name']), $what, '/app/referrals/' . $code);
+    notify($giver['id'], 'referral_won', 'Admin recorded business you gave ' . first_name($receiver['full_name']), $what, '/app/referrals/' . $code);
+    @unlink(PRIVATE_DIR . '/cache/public-stats.json');
+    ok(array('id' => $id, 'code' => $code));
+});
+
+/** Admin records a 121 that already happened. It counts right away (confirmed by the admin). */
+route('POST', 'admin/records/add-121', function () {
+    $me = require_admin();
+    $v = new V();
+    $aId = $v->int('member_a', 'First member');
+    $bId = $v->int('member_b', 'Second member');
+    $at = $v->datetime('meeting_at', 'Date & time');
+    $mode = $v->enum('mode', 'Mode', array('in_person', 'online'), false, 'in_person');
+    $discussed = $v->str('business_discussed', 'Business discussed', false, 2000);
+    $v->done();
+    $a = approved_member_or_fail($aId, 'member_a');
+    $b = approved_member_or_fail($bId, 'member_b', $a['id'], 'Pick two different members.');
+    if (strtotime($at) > time() + 3600) {
+        fail('validation', 'Only a 121 that already happened can be recorded.', 422, array('meeting_at' => 'Must be in the past.'));
+    }
+    $id = insert('one_to_ones', array(
+        'requester_id' => $a['id'], 'partner_id' => $b['id'], 'meeting_at' => $at, 'mode' => $mode,
+        'status' => 'completed', 'business_discussed' => $discussed,
+        'confirmed_at' => now(), 'force_confirmed_by' => $me['id'],
+    ));
+    $code = sprintf('BBA-M-%06d', $id);
+    q('UPDATE one_to_ones SET code = ? WHERE id = ?', array($code, $id));
+    audit('121_added', '121', $id, null, array('code' => $code, 'member_a' => (int) $a['id'], 'member_b' => (int) $b['id'], 'meeting_at' => $at));
+    $when = date('j M', strtotime($at));
+    notify($a['id'], '121_confirmed', 'Admin recorded your 121 with ' . first_name($b['full_name']), 'On ' . $when . '. It counts for both of you.', '/app/121s?open=' . $id);
+    notify($b['id'], '121_confirmed', 'Admin recorded your 121 with ' . first_name($a['full_name']), 'On ' . $when . '. It counts for both of you.', '/app/121s?open=' . $id);
+    @unlink(PRIVATE_DIR . '/cache/public-stats.json');
+    ok(array('id' => $id, 'code' => $code));
+});
+
 route('POST', 'admin/121s/force-confirm', function () {
     $me = require_admin();
     $o = one('SELECT * FROM one_to_ones WHERE id = ?', array((int) in_val('id')));

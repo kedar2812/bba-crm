@@ -40,7 +40,9 @@ export function useCategories() {
 }
 
 export function useMemberPicker() {
-  return useQuery({ queryKey: ['picker'], queryFn: () => api.get<MemberMini[]>('members/picker'), staleTime: 5 * 60_000 })
+  // Admin accounts can't use member routes, so they read the same list from the admin API.
+  const admin = useMe().data?.member?.role === 'admin'
+  return useQuery({ queryKey: ['picker', admin], queryFn: () => api.get<MemberMini[]>(admin ? 'admin/members/picker' : 'members/picker'), staleTime: 5 * 60_000 })
 }
 
 /** Invalidate everything that depends on activity data after a mutation. */
