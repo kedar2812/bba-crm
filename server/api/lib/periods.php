@@ -190,7 +190,7 @@ function stats_for($memberId, $from, $to)
     return $out;
 }
 
-/** Attendance % for a member over a range (excused meetings are left out). */
+/** Attendance % for a member over a range. Sending a substitute counts as attending. */
 function attendance_pct($memberId, $from, $to)
 {
     $rows = all('SELECT a.status, COUNT(*) AS n FROM attendance a JOIN meetings mt ON mt.id = a.meeting_id
@@ -198,8 +198,8 @@ function attendance_pct($memberId, $from, $to)
     $present = 0;
     $absent = 0;
     foreach ($rows as $r) {
-        if ($r['status'] === 'present') {
-            $present = (int) $r['n'];
+        if ($r['status'] === 'present' || $r['status'] === 'substitute') {
+            $present += (int) $r['n'];
         } elseif ($r['status'] === 'absent') {
             $absent = (int) $r['n'];
         }

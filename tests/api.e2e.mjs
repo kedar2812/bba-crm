@@ -336,6 +336,26 @@ async function main() {
   check('monthly chart adds up to the cards', r.data.chart.reduce((s, x) => s + x.received, 0) === r.data.cards.referrals_received && Math.round(r.data.chart.reduce((s, x) => s + x.biz_given, 0)) === Math.round(r.data.cards.business_given), [r.data.cards])
   r = await A.get('dashboard', { period: 'all' })
   check('all time starts the chart at the first record', r.ok && r.data.chart.length > 0 && r.data.chart.length <= 40, r.data?.chart.length)
+  // Business Closed: received and generated-for-others never mix, and follow the period
+  const closedR = (await B.get('referrals', { box: 'closed', side: 'received', period: 'all' })).data
+  const closedG = (await B.get('referrals', { box: 'closed', side: 'given', period: 'all' })).data
+  check('"You received" lists only business B received', closedR.items.length > 0 && closedR.items.every((x) => x.receiver.id === meB.id), closedR.items.map((x) => x.receiver.id))
+  check('"Generated for others" lists only business B generated', closedG.items.every((x) => x.giver.id === meB.id), closedG.items.map((x) => x.giver.id))
+  const dashAll = (await B.get('dashboard', { period: 'all' })).data.cards
+  check('Business Closed totals match the dashboard cards', Math.round(closedR.totals.received) === Math.round(dashAll.business_received) && Math.round(closedR.totals.given) === Math.round(dashAll.business_given), [closedR.totals, dashAll])
+  const closedDay = (await B.get('referrals', { box: 'closed', side: 'received', period: 'custom', from: today, to: today })).data
+  const dashDay = (await B.get('dashboard', { period: 'custom', from: today, to: today })).data.cards
+  check('Business Closed follows a custom range', closedDay.label && closedDay.items.every((x) => x.won_date === today) && Math.round(closedDay.totals.received) === Math.round(dashDay.business_received), [closedDay.label, closedDay.totals, dashDay.business_received])
+  // Admin → member page: received and generated are separate lists, and follow the admin's period
+  const av = (await admin.get('admin/members/view', { id: meB.id, from: '2000-01-01', to: '2999-12-31' })).data
+  check('admin member page: "received" lists only business they received', av.business_received.length > 0 && av.business_received.every((x) => x.receiver.id === meB.id && x.status === 'won'), av.business_received.length)
+  check('admin member page: "generated" lists only business they generated', av.business_generated.every((x) => x.giver.id === meB.id && x.status === 'won'), av.business_generated.length)
+  check('admin member page: totals match the member dashboard', Math.round(av.stats.business_received) === Math.round(dashAll.business_received) && Math.round(av.stats.business_given) === Math.round(dashAll.business_given), [av.stats, dashAll])
+  const avDay = (await admin.get('admin/members/view', { id: meB.id, from: today, to: today })).data
+  check('admin member page follows a custom range', avDay.from === today && avDay.business_received.every((x) => x.won_date === today) && Math.round(avDay.stats.business_received) === Math.round(dashDay.business_received), [avDay.from, avDay.stats.business_received, dashDay.business_received])
+  const legacy = (await B.get('referrals', { box: 'closed' })).data
+  check('Business Closed without a side still lists both (older app)', legacy.items.length >= closedR.items.length, legacy.total)
+
   r = await admin.get('admin/overview', { from: monthAgo, to: today })
   check('admin trend follows the range', r.data.trend_grain === 'week' && r.data.trend.reduce((s, x) => s + x.referrals, 0) === r.data.stats.referrals_given, [r.data.trend_grain, r.data.stats.referrals_given])
 
@@ -366,6 +386,20 @@ async function main() {
   check('admin saves attendance', r.ok, r)
   const att = (await A.get('meetings')).data
   check('attendance % is a number', typeof att.attendance_all === 'number', att.attendance_all)
+  // S = sent a substitute: counts as attended. An old client sending "excused" is stored as substitute.
+  const meetingB = (await B.get('meetings')).data
+  const allB = meetingB.attendance_all
+  r = await admin.post('admin/attendance/save', { meeting_id: m0.id, members: { [meA.id]: 'substitute', [meB.id]: 'excused' }, visitors: {} })
+  check('admin marks S (substitute)', r.ok, r)
+  const mA = [...(await A.get('meetings')).data.past, ...(await A.get('meetings')).data.upcoming].find((x) => x.id === m0.id)
+  const mB = [...(await B.get('meetings')).data.past, ...(await B.get('meetings')).data.upcoming].find((x) => x.id === m0.id)
+  check('member sees S as "substitute"', mA?.my_status === 'substitute', mA)
+  check('legacy "excused" is saved as substitute', mB?.my_status === 'substitute', mB)
+  check('a substitute counts as attended (not absent)', (await B.get('meetings')).data.attendance_all >= allB, [allB, (await B.get('meetings')).data.attendance_all])
+  r = await admin.post('admin/attendance/save', { meeting_id: m0.id, members: { [meA.id]: 'late' }, visitors: {} })
+  check('unknown attendance marks are ignored', r.ok && [...(await A.get('meetings')).data.past, ...(await A.get('meetings')).data.upcoming].find((x) => x.id === m0.id)?.my_status === 'substitute')
+  const sheet = (await admin.get('admin/attendance', { meeting_id: m0.id })).data.members
+  check('admin accounts are not on the attendance sheet', !sheet.some((x) => x.full_name === 'Kedar Admin'), sheet.length)
 
   // Testimonial + settings
   r = await A.post('testimonials/save', { subject_id: meB.id, body: 'Wonderful to work with, very reliable.' })

@@ -193,21 +193,36 @@ route('GET', 'admin/members/view', function () {
     $m['offers'] = split_tags($m['offers']);
     $m['looking_for'] = split_tags($m['looking_for']);
     $id = (int) $m['id'];
-    $refs = array();
-    foreach (all(referral_select() . ' WHERE r.giver_id = ? OR r.receiver_id = ? ORDER BY r.id DESC LIMIT 100', array($id, $id)) as $r) {
-        $refs[] = referral_shape($r, $id);
-    }
+    // Everything below follows the admin's selected period (all time when none is sent).
+    $c = custom_range();
+    list($from, $to) = $c ? $c : array('2000-01-01', '2999-12-31');
+    $shape = function ($rows) use ($id) {
+        $out = array();
+        foreach ($rows as $r) {
+            $out[] = referral_shape($r, $id);
+        }
+        return $out;
+    };
+    // Business received and business generated for others are kept apart, never mixed.
+    $won = " AND r.status = 'won' AND r.won_date BETWEEN ? AND ? ORDER BY r.won_date DESC, r.id DESC LIMIT 200";
+    $received = $shape(all(referral_select() . ' WHERE r.receiver_id = ?' . $won, array($id, $from, $to)));
+    $generated = $shape(all(referral_select() . ' WHERE r.giver_id = ?' . $won, array($id, $from, $to)));
+    $refs = $shape(all(referral_select() . " WHERE (r.giver_id = ? OR r.receiver_id = ?) AND r.type = 'referral' AND r.referral_date BETWEEN ? AND ? ORDER BY r.referral_date DESC, r.id DESC LIMIT 200", array($id, $id, $from, $to)));
     $ones = array();
-    foreach (all(ones_select() . ' WHERE o.requester_id = ? OR o.partner_id = ? ORDER BY o.meeting_at DESC LIMIT 100', array($id, $id)) as $o) {
+    foreach (all(ones_select() . ' WHERE (o.requester_id = ? OR o.partner_id = ?) AND o.meeting_at BETWEEN ? AND ? ORDER BY o.meeting_at DESC LIMIT 200', array($id, $id, $from . ' 00:00:00', $to . ' 23:59:59')) as $o) {
         $ones[] = one_shape($o, $id);
     }
     ok(array(
         'member' => $m,
-        'stats' => stats_for($id, '2000-01-01', '2999-12-31'),
-        'attendance' => attendance_pct($id, '2000-01-01', '2999-12-31'),
+        'from' => $from,
+        'to' => $to,
+        'stats' => stats_for($id, $from, $to),
+        'attendance' => attendance_pct($id, $from, $to),
+        'business_received' => $received,
+        'business_generated' => $generated,
         'referrals' => $refs,
         'ones' => $ones,
-        'visitors' => all('SELECT * FROM visitors WHERE invited_by = ? ORDER BY id DESC', array($id)),
+        'visitors' => all('SELECT * FROM visitors WHERE invited_by = ? AND invited_date BETWEEN ? AND ? ORDER BY id DESC', array($id, $from, $to)),
     ));
 });
 
@@ -551,7 +566,7 @@ route('GET', 'admin/attendance', function () {
     }
     $members = all("SELECT m.id, m.full_name, m.business_name, m.photo_path, a.status FROM members m
         LEFT JOIN attendance a ON a.member_id = m.id AND a.meeting_id = ?
-        WHERE m.status = 'approved' OR a.status IS NOT NULL ORDER BY m.full_name", array($mid));
+        WHERE m.role = 'member' AND (m.status = 'approved' OR a.status IS NOT NULL) ORDER BY m.full_name", array($mid));
     foreach ($members as $i => $m) {
         $members[$i]['photo_url'] = photo_url($m['photo_path']);
         unset($members[$i]['photo_path']);
@@ -570,7 +585,10 @@ route('POST', 'admin/attendance/save', function () {
     $n = 0;
     if (is_array($marks)) {
         foreach ($marks as $memberId => $status) {
-            if (!in_array($status, array('present', 'absent', 'excused'), true)) {
+            if ($status === 'excused') {
+                $status = 'substitute'; // an app version from before the rename
+            }
+            if (!in_array($status, array('present', 'absent', 'substitute'), true)) {
                 continue;
             }
             $ex = one('SELECT id FROM attendance WHERE meeting_id = ? AND member_id = ?', array($mid, (int) $memberId));

@@ -258,7 +258,7 @@ const pillStyles: Record<string, string> = {
   not_interested: 'bg-ink-950/[.06] text-ink-400',
   present: 'bg-success/15 text-success',
   absent: 'bg-danger/10 text-danger',
-  excused: 'bg-ink-950/[.06] text-ink-600',
+  substitute: 'bg-gold-100 text-gold-700',
   approved: 'bg-success/15 text-success',
   pending_review: 'bg-transparent text-gold-700 ring-1 ring-inset ring-gold-500',
   rejected: 'bg-danger/10 text-danger',
@@ -269,7 +269,7 @@ const pillStyles: Record<string, string> = {
 const pillLabels: Record<string, string> = {
   new: 'New', contacted: 'Contacted', in_progress: 'In Progress', won: 'Won', lost: 'Lost', pending: 'Pending', disputed: 'Disputed', void: 'Voided',
   requested: 'Requested', scheduled: 'Scheduled', awaiting_confirmation: 'Unconfirmed', completed: 'Completed', declined: 'Declined', cancelled: 'Cancelled',
-  invited: 'Invited', attended: 'Attended', joined: 'Joined', not_interested: 'Not interested', present: 'Present', absent: 'Absent', excused: 'Excused',
+  invited: 'Invited', attended: 'Attended', joined: 'Joined', not_interested: 'Not interested', present: 'Present', absent: 'Absent', substitute: 'Substitute',
   approved: 'Active', pending_review: 'Pending review', rejected: 'Rejected', deactivated: 'Inactive', admin: 'Admin',
 }
 

@@ -3,14 +3,18 @@ import { motion } from 'framer-motion'
 import { Search, Send } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { MEMBER_PERIODS, PeriodPicker } from '@/components/PeriodPicker'
 import { useQuickAdd } from '@/features/quickadd/QuickAdd'
 import { Avatar, Button, Chips, EmptyState, ErrorState, ListSkeleton, Segmented, StatusPill, cx, itemVariants, listVariants } from '@/components/ui'
 import { api, errorMessage } from '@/lib/api'
 import { fmtShortDate, inr, inrCompact } from '@/lib/format'
+import { periodParams, useSavedPeriod } from '@/lib/period'
 import { useDebounced } from '@/lib/session'
 import type { Paged, Referral } from '@/lib/types'
 
 type Box = 'given' | 'received' | 'closed'
+type Side = 'received' | 'given'
+const PERIOD_VALUES = MEMBER_PERIODS.map((p) => p.value)
 
 export function ReferralRow({ r }: { r: Referral }) {
   const other = r.direction === 'given' ? r.receiver : r.giver
@@ -42,17 +46,26 @@ export function ReferralRow({ r }: { r: Referral }) {
 export default function Referrals() {
   const [params, setParams] = useSearchParams()
   const box = (['given', 'received', 'closed'].includes(params.get('tab') ?? '') ? params.get('tab') : 'given') as Box
+  // Business Closed shows one side at a time, so received and generated never mix.
+  const side: Side = params.get('side') === 'given' ? 'given' : 'received'
+  const [sel, setSel] = useSavedPeriod('member', PERIOD_VALUES)
   const [status, setStatus] = useState('')
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const q = useDebounced(search, 250)
   const qa = useQuickAdd()
+  const closedParams = box === 'closed' ? { side, ...periodParams(sel) } : {}
   const list = useQuery({
-    queryKey: ['referrals', box, status, q, page],
-    queryFn: () => api.get<Paged<Referral> & { totals?: { received: number; given: number } }>('referrals', { box, status: box === 'closed' ? '' : status, q, page }),
+    queryKey: ['referrals', box, status, q, page, closedParams],
+    queryFn: () =>
+      api.get<Paged<Referral> & { totals?: { received: number; given: number }; label?: string }>('referrals', { box, status: box === 'closed' ? '' : status, q, page, ...closedParams }),
     placeholderData: keepPreviousData,
   })
   const data = list.data
+  const setSide = (v: Side) => {
+    setParams({ tab: 'closed', side: v }, { replace: true })
+    setPage(1)
+  }
 
   return (
     <div className="page">
@@ -77,17 +90,39 @@ export default function Referrals() {
         ]}
       />
 
+      {box === 'closed' && (
+        <div className="mt-4">
+          <PeriodPicker sel={sel} onChange={(v) => { setSel(v); setPage(1) }} />
+        </div>
+      )}
+
       {box === 'closed' && data?.totals && (
-        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mt-4 grid grid-cols-2 gap-3">
-          <div className="rounded-card bg-ink-950 p-4 text-white">
-            <p className="text-[12px] font-medium text-white/60">You received</p>
-            <p className="mt-1 font-display text-[22px] font-bold text-gold-300 tabular">{inr(data.totals.received)}</p>
-          </div>
-          <div className="card p-4">
-            <p className="text-[12px] font-medium text-ink-600">You generated for others</p>
-            <p className="mt-1 font-display text-[22px] font-bold tabular">{inr(data.totals.given)}</p>
-          </div>
+        <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="mt-3 grid grid-cols-2 gap-3" role="tablist" aria-label="Business closed">
+          {(
+            [
+              ['received', 'You received', data.totals.received],
+              ['given', 'You generated for others', data.totals.given],
+            ] as [Side, string, number][]
+          ).map(([v, label, total]) => (
+            <button
+              key={v}
+              type="button"
+              role="tab"
+              aria-selected={side === v}
+              onClick={() => setSide(v)}
+              className={cx('rounded-card p-4 text-left transition-shadow', side === v ? 'bg-ink-950 text-white shadow-lift ring-2 ring-gold-500' : 'card hover:shadow-lift')}
+            >
+              <p className={cx('text-[12px] font-medium', side === v ? 'text-white/60' : 'text-ink-600')}>{label}</p>
+              <p className={cx('mt-1 font-display text-[22px] font-bold tabular', side === v && 'text-gold-300')}>{inr(total)}</p>
+              <p className={cx('mt-1 text-[11.5px] font-semibold', side === v ? 'text-gold-300' : 'text-ink-400')}>{side === v ? 'Showing below' : 'Tap to show'}</p>
+            </button>
+          ))}
         </motion.div>
+      )}
+      {box === 'closed' && data?.label && (
+        <p className="mt-2 text-[12.5px] text-ink-600">
+          {side === 'received' ? 'Business you received' : 'Business you generated for others'} · {data.label}
+        </p>
       )}
 
       <div className="mt-4 space-y-3">
@@ -129,7 +164,7 @@ export default function Referrals() {
         {data && data.items.length === 0 && (
           <EmptyState
             icon={<Send className="h-6 w-6" />}
-            title={search || status ? 'Nothing matches' : box === 'given' ? 'No referrals given yet' : box === 'received' ? 'No referrals received yet' : 'No business closed yet'}
+            title={search || status ? 'Nothing matches' : box === 'given' ? 'No referrals given yet' : box === 'received' ? 'No referrals received yet' : side === 'received' ? 'No business received in this period' : 'No business generated in this period'}
             sub={search || status ? 'Try a different search or filter.' : box === 'given' ? 'Give your first one — it takes under a minute.' : box === 'closed' ? 'Won referrals and thank-you notes appear here.' : 'Referrals other members pass to you appear here.'}
             action={
               !search && !status && box !== 'received' ? (
@@ -140,7 +175,7 @@ export default function Referrals() {
         )}
         {data && data.items.length > 0 && (
           <>
-            <motion.div key={`${box}-${status}`} variants={listVariants} initial="hidden" animate="show" className="card divide-y divide-line overflow-hidden">
+            <motion.div key={`${box}-${status}-${side}`} variants={listVariants} initial="hidden" animate="show" className="card divide-y divide-line overflow-hidden">
               {data.items.map((r) => (
                 <motion.div key={r.id} variants={itemVariants}>
                   <ReferralRow r={r} />

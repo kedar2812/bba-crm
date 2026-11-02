@@ -10,7 +10,7 @@ import type { Meeting } from '@/lib/types'
 import { AdminTitle } from './shared'
 
 type Row = Meeting & { present_count: number; marked_count: number; visitors_count: number }
-type Mark = 'present' | 'absent' | 'excused'
+type Mark = 'present' | 'absent' | 'substitute'
 
 export default function AdminMeetings() {
   const q = useQuery({ queryKey: ['admin', 'meetings'], queryFn: () => api.get<Row[]>('admin/meetings') })
@@ -138,6 +138,7 @@ function AttendanceSheet({ meetingId, onClose }: { meetingId: number; onClose: (
   })
   const members = q.data?.members ?? []
   const present = Object.values(marks).filter((m) => m === 'present').length
+  const subs = Object.values(marks).filter((m) => m === 'substitute').length
 
   return (
     <Sheet
@@ -148,7 +149,7 @@ function AttendanceSheet({ meetingId, onClose }: { meetingId: number; onClose: (
       footer={
         <div className="flex items-center gap-3">
           <p className="flex-1 text-[13px] text-ink-600">
-            <span className="font-semibold text-ink-950">{present}</span> present · {Object.keys(marks).length}/{members.length} marked
+            <span className="font-semibold text-ink-950">{present}</span> present{subs > 0 && ` · ${subs} substitute`} · {Object.keys(marks).length}/{members.length} marked
           </p>
           <Button loading={save.isPending} onClick={() => save.mutate()}>
             Save
@@ -171,20 +172,23 @@ function AttendanceSheet({ meetingId, onClose }: { meetingId: number; onClose: (
           >
             Mark everyone present
           </Button>
+          <p className="text-[12.5px] text-ink-600">
+            <b>P</b> present · <b>A</b> absent · <b>S</b> sent a substitute (counts as attended)
+          </p>
           <div className="divide-y divide-line rounded-card border border-line bg-white">
             {members.map((m) => (
               <div key={m.id} className="flex items-center gap-3 px-3 py-2.5">
                 <Avatar src={m.photo_url} name={m.full_name} size={34} />
                 <p className="min-w-0 flex-1 truncate text-[14px] font-semibold">{m.full_name}</p>
                 <div className="flex shrink-0 rounded-[10px] bg-ink-950/[.06] p-0.5">
-                  {(['present', 'absent', 'excused'] as Mark[]).map((s) => (
+                  {(['present', 'absent', 'substitute'] as Mark[]).map((s) => (
                     <button
                       key={s}
                       type="button"
                       onClick={() => setMarks({ ...marks, [m.id]: s })}
                       className={cx(
                         'h-9 w-9 rounded-[8px] text-[13px] font-bold transition-colors sm:w-auto sm:px-2.5',
-                        marks[m.id] === s ? (s === 'present' ? 'bg-success text-white' : s === 'absent' ? 'bg-danger text-white' : 'bg-ink-600 text-white') : 'text-ink-600',
+                        marks[m.id] === s ? (s === 'present' ? 'bg-success text-white' : s === 'absent' ? 'bg-danger text-white' : 'bg-gold-500 text-ink-950') : 'text-ink-600',
                       )}
                       aria-label={s}
                       title={s}

@@ -1,6 +1,5 @@
-import { useState } from 'react'
 import { Input, Select } from '@/components/ui'
-import { todayISO } from '@/lib/format'
+import { useSavedPeriod } from '@/lib/period'
 
 export type Range = { from: string; to: string; label: string }
 
@@ -32,10 +31,15 @@ export function rangeFor(kind: string): Range {
   }
 }
 
-/** Period selector with a custom range option. */
-export function useRangePicker(initial = 'this_month') {
-  const [kind, setKind] = useState(initial)
-  const [custom, setCustom] = useState({ from: todayISO().slice(0, 8) + '01', to: todayISO() })
+const ADMIN_PERIODS = ['this_month', 'last_month', 'this_quarter', 'last_quarter', 'this_year', 'all', 'custom']
+
+/** Period selector with a custom range option, remembered across admin pages and logins until changed. */
+export function useRangePicker() {
+  const [sel, setSel] = useSavedPeriod('admin', ADMIN_PERIODS)
+  const kind = sel.period
+  const custom = sel.from <= sel.to ? { from: sel.from, to: sel.to } : { from: sel.to, to: sel.from }
+  const setKind = (period: string) => setSel({ period })
+  const setCustom = (v: { from: string; to: string }) => setSel(v)
   const range: Range = kind === 'custom' ? { ...custom, label: `${custom.from}_to_${custom.to}` } : rangeFor(kind)
   const picker = (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
@@ -52,8 +56,8 @@ export function useRangePicker(initial = 'this_month') {
       </div>
       {kind === 'custom' && (
         <div className="grid grid-cols-2 gap-2">
-          <Input aria-label="From" type="date" value={custom.from} onChange={(e) => setCustom({ ...custom, from: e.target.value })} className="h-11" />
-          <Input aria-label="To" type="date" value={custom.to} onChange={(e) => setCustom({ ...custom, to: e.target.value })} className="h-11" />
+          <Input aria-label="From" type="date" value={custom.from} max={custom.to} onChange={(e) => e.target.value && setCustom({ ...custom, from: e.target.value })} className="h-11" />
+          <Input aria-label="To" type="date" value={custom.to} min={custom.from} onChange={(e) => e.target.value && setCustom({ ...custom, to: e.target.value })} className="h-11" />
         </div>
       )}
     </div>

@@ -146,7 +146,7 @@ export interface Meeting {
   venue: string | null
   online_link: string | null
   notes: string | null
-  my_status?: 'present' | 'absent' | 'excused' | null
+  my_status?: 'present' | 'absent' | 'substitute' | null
 }
 
 export interface Notification {

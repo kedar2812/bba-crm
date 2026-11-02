@@ -8,7 +8,7 @@
 
 function schema_version()
 {
-    return 6;
+    return 7;
 }
 
 function ddl($sql)
@@ -56,7 +56,7 @@ function run_migrations()
         flock($lock, LOCK_EX);
     }
     $done = applied_migrations();
-    $list = array('m001_base', 'm002_seed', 'm003_landing_copy', 'm004_invites', 'm005_instagram_feed', 'm006_one_photos');
+    $list = array('m001_base', 'm002_seed', 'm003_landing_copy', 'm004_invites', 'm005_instagram_feed', 'm006_one_photos', 'm007_attendance_substitute');
     foreach ($list as $m) {
         if (in_array($m, $done, true)) {
             continue;
@@ -435,6 +435,12 @@ function m006_one_photos()
     } catch (Exception $e) {
         // already exists
     }
+}
+
+/** Attendance "E" (excused) became "S" (substitute). */
+function m007_attendance_substitute()
+{
+    q("UPDATE attendance SET status = 'substitute' WHERE status = 'excused'");
 }
 
 function ensure_first_admin()

@@ -289,7 +289,7 @@ function cast_deep($data)
 function numeric_key($k)
 {
     return (bool) preg_match(
-        '/^(id|n|value|total|count|done|target|pct|sort_order|attempts|session_version|unread|page|per_page)$|_id$|^is_|_count$|_value$|_total$|_by$|^cnt|_pct$|^sum_|^num_|^business_|^referrals_|^ones_|^visitors_|^members_|^present|^absent|^excused|^prev_/',
+        '/^(id|n|value|total|count|done|target|pct|sort_order|attempts|session_version|unread|page|per_page)$|_id$|^is_|_count$|_value$|_total$|_by$|^cnt|_pct$|^sum_|^num_|^business_|^referrals_|^ones_|^visitors_|^members_|^present|^absent|^substitute|^prev_/',
         $k
     ) && !preg_match('/_text$|_name$|_at$|_date$/', $k);
 }

@@ -9,11 +9,14 @@ import { api, errorMessage, fieldErrors } from '@/lib/api'
 import { fmtDate, fmtDateTime, inr, inrCompact, relTime } from '@/lib/format'
 import { useCategories, useMe } from '@/lib/session'
 import type { OneToOne, Referral, Visitor } from '@/lib/types'
+import { useRangePicker } from './shared'
 
 interface Detail {
   member: Record<string, string | number | null> & { offers: string[]; looking_for: string[]; photo_url: string | null }
   stats: { referrals_given: number; referrals_received: number; business_given: number; business_received: number; ones_done: number; visitors_invited: number }
   attendance: number | null
+  business_received: Referral[]
+  business_generated: Referral[]
   referrals: Referral[]
   ones: OneToOne[]
   visitors: Visitor[]
@@ -26,12 +29,21 @@ export default function AdminMemberDetail() {
   const qc = useQueryClient()
   const meId = useMe().data?.member?.id
   const cats = useCategories()
-  const q = useQuery({ queryKey: ['admin', 'member', id], queryFn: () => api.get<Detail>('admin/members/view', { id }) })
+  // The same saved period as the other admin pages, so it stays put until the admin changes it.
+  const { range, picker } = useRangePicker()
+  const q = useQuery({
+    queryKey: ['admin', 'member', id, range.from, range.to],
+    queryFn: () => api.get<Detail>('admin/members/view', { id, from: range.from, to: range.to }),
+    placeholderData: (prev) => prev,
+  })
   const [tab, setTab] = useState<'edit' | 'records'>('edit')
+  const [biz, setBiz] = useState<'received' | 'generated' | 'referrals'>('received')
   const [v, setV] = useState<Record<string, string>>({})
   const [offers, setOffers] = useState<string[]>([])
   const [looking, setLooking] = useState<string[]>([])
 
+  // Fill the edit form when the member loads — not when only the period changes, which would wipe unsaved edits.
+  const loadedKey = q.data ? `${q.data.member.id}:${q.data.member.updated_at}` : ''
   useEffect(() => {
     const m = q.data?.member
     if (!m) return
@@ -42,7 +54,8 @@ export default function AdminMemberDetail() {
     setV(init)
     setOffers(m.offers)
     setLooking(m.looking_for)
-  }, [q.data])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadedKey])
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['admin'] })
   const save = useMutation({
@@ -102,7 +115,13 @@ export default function AdminMemberDetail() {
         <p className="mt-3 text-[12.5px] text-ink-400">
           Joined {fmtDate(String(m.approved_at ?? m.created_at))} · Last login {m.last_login_at ? relTime(String(m.last_login_at)) : 'never'}
         </p>
-        <div className="mt-4 grid grid-cols-3 gap-2 text-center sm:grid-cols-6">
+        <div className="mt-4 flex flex-col gap-2 border-t border-line pt-4 sm:flex-row sm:items-end sm:justify-between">
+          <p className="text-[13px] text-ink-600">
+            Numbers and records for <span className="font-semibold text-ink-950">{range.from === '2000-01-01' ? 'all time' : range.label.includes('_to_') ? `${fmtDate(range.from)} – ${fmtDate(range.to)}` : range.label}</span>
+          </p>
+          {picker}
+        </div>
+        <div className="mt-3 grid grid-cols-3 gap-2 text-center sm:grid-cols-6">
           {[
             ['Ref. given', stats.referrals_given],
             ['Ref. received', stats.referrals_received],
@@ -194,9 +213,41 @@ export default function AdminMemberDetail() {
       {tab === 'records' && (
         <div className="mt-4 space-y-5">
           <section>
-            <h2 className="mb-2 text-[15px] font-bold">Referrals & business ({q.data.referrals.length})</h2>
+            {/* Business received and business generated for others are shown apart, never mixed. */}
+            <Segmented
+              value={biz}
+              onChange={setBiz}
+              options={[
+                { value: 'received', label: `Received · ${inrCompact(stats.business_received)}` },
+                { value: 'generated', label: `Generated · ${inrCompact(stats.business_given)}` },
+                { value: 'referrals', label: `Referrals · ${q.data.referrals.length}` },
+              ]}
+            />
+            <p className="mb-2 mt-2.5 text-[13px] text-ink-600">
+              {biz === 'received' ? `Business ${m.full_name} received from other members.` : biz === 'generated' ? `Business ${m.full_name} generated for other members.` : 'Referrals given and received, by referral date.'}
+            </p>
+            {biz !== 'referrals' ? (
+              <div className="card divide-y divide-line overflow-hidden">
+                {(biz === 'received' ? q.data.business_received : q.data.business_generated).length === 0 && <p className="p-4 text-[14px] text-ink-600">None in this period.</p>}
+                {(biz === 'received' ? q.data.business_received : q.data.business_generated).map((r) => (
+                  <Link key={r.id} to={`/admin/records?type=referrals&q=${r.code}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-cream-50">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[14px] font-semibold">
+                        {biz === 'received' ? `From ${r.giver.full_name}` : `For ${r.receiver.full_name}`} · {r.requirement}
+                      </p>
+                      <p className="text-[12px] text-ink-400">
+                        {r.code} · {fmtDate(r.won_date)}
+                        {r.type === 'direct' && ' · Thank-you note'}
+                      </p>
+                    </div>
+                    <span className="text-[13px] font-semibold tabular">{inr(r.final_value ?? 0)}</span>
+                    {(r.is_void || r.is_disputed) && <StatusPill status={r.is_void ? 'void' : 'disputed'} />}
+                  </Link>
+                ))}
+              </div>
+            ) : (
             <div className="card divide-y divide-line overflow-hidden">
-              {q.data.referrals.length === 0 && <p className="p-4 text-[14px] text-ink-600">None yet.</p>}
+              {q.data.referrals.length === 0 && <p className="p-4 text-[14px] text-ink-600">None in this period.</p>}
               {q.data.referrals.map((r) => (
                 <Link key={r.id} to={`/admin/records?type=referrals&q=${r.code}`} className="flex items-center gap-3 px-4 py-2.5 hover:bg-cream-50">
                   <div className="min-w-0 flex-1">
@@ -212,6 +263,7 @@ export default function AdminMemberDetail() {
                 </Link>
               ))}
             </div>
+            )}
           </section>
           <section>
             <h2 className="mb-2 text-[15px] font-bold">121s ({q.data.ones.length})</h2>

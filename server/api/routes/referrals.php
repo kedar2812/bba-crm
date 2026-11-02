@@ -90,9 +90,25 @@ route('GET', 'referrals', function () {
         $where[] = "r.receiver_id = ? AND r.type = 'referral'";
         $params[] = $id;
     } elseif ($box === 'closed') {
-        $where[] = "(r.giver_id = ? OR r.receiver_id = ?) AND r.status = 'won'";
-        $params[] = $id;
-        $params[] = $id;
+        // side=received: business I received · side=given: business I generated for others.
+        $side = qs('side');
+        if ($side === 'received') {
+            $where[] = "r.receiver_id = ? AND r.status = 'won'";
+            $params[] = $id;
+        } elseif ($side === 'given') {
+            $where[] = "r.giver_id = ? AND r.status = 'won'";
+            $params[] = $id;
+        } else {
+            $where[] = "(r.giver_id = ? OR r.receiver_id = ?) AND r.status = 'won'";
+            $params[] = $id;
+            $params[] = $id;
+        }
+        if (qs('period')) {
+            $range = range_with_prev();
+            $where[] = 'r.won_date BETWEEN ? AND ?';
+            $params[] = $range[0];
+            $params[] = $range[1];
+        }
     } else {
         $where[] = "r.giver_id = ? AND r.type = 'referral'";
         $params[] = $id;
@@ -120,9 +136,19 @@ route('GET', 'referrals', function () {
     }
     $out = array('items' => $items, 'total' => $total, 'page' => $page, 'per_page' => $per);
     if ($box === 'closed') {
+        // Same rules as the dashboard cards, so the two always agree.
+        $inRange = '';
+        $rp = array();
+        if (isset($range)) {
+            $inRange = ' AND won_date BETWEEN ? AND ?';
+            $rp = array($range[0], $range[1]);
+            $out['from'] = $range[0];
+            $out['to'] = $range[1];
+            $out['label'] = $range[4];
+        }
         $out['totals'] = array(
-            'received' => (float) val("SELECT COALESCE(SUM(final_value),0) FROM referrals WHERE status='won' AND receiver_id = ? AND " . LIVE_REF, array($id)),
-            'given' => (float) val("SELECT COALESCE(SUM(final_value),0) FROM referrals WHERE status='won' AND giver_id = ? AND " . LIVE_REF, array($id)),
+            'received' => (float) val("SELECT COALESCE(SUM(final_value),0) FROM referrals WHERE status='won' AND receiver_id = ? AND " . LIVE_REF . $inRange, array_merge(array($id), $rp)),
+            'given' => (float) val("SELECT COALESCE(SUM(final_value),0) FROM referrals WHERE status='won' AND giver_id = ? AND " . LIVE_REF . $inRange, array_merge(array($id), $rp)),
         );
     }
     ok($out);

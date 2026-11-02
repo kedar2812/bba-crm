@@ -110,7 +110,7 @@ if ((int) val('SELECT COUNT(*) FROM referrals') === 0) {
         if ($i < 4) {
             foreach ($approved as $mem) {
                 $roll = mt_rand(1, 10);
-                insert('attendance', array('meeting_id' => $mid, 'member_id' => $mem, 'status' => $roll <= 8 ? 'present' : ($roll === 9 ? 'absent' : 'excused')));
+                insert('attendance', array('meeting_id' => $mid, 'member_id' => $mem, 'status' => $roll <= 8 ? 'present' : ($roll === 9 ? 'absent' : 'substitute')));
             }
         }
     }

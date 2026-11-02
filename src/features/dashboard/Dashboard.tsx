@@ -1,11 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { ArrowDownLeft, ArrowUpRight, Bell, CalendarCheck, ChevronRight, HeartHandshake, IndianRupee, Link2, MapPin, MessageSquareQuote, Send, Trophy, UserPlus } from 'lucide-react'
-import { lazy, Suspense, useState, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Avatar, CountUp, ErrorState, Input, ProgressRing, Segmented, Select, Skeleton, cx, itemVariants, listVariants } from '@/components/ui'
+import { MEMBER_PERIODS, PeriodPicker } from '@/components/PeriodPicker'
+import { Avatar, CountUp, ErrorState, ProgressRing, Segmented, Skeleton, cx, itemVariants, listVariants } from '@/components/ui'
 import { api, errorMessage } from '@/lib/api'
-import { firstName, fmtClock, greeting, inrCompact, parseDate, relTime, todayISO } from '@/lib/format'
+import { firstName, fmtClock, greeting, inrCompact, parseDate, relTime } from '@/lib/format'
+import { periodParams, useSavedPeriod } from '@/lib/period'
 import { useMe } from '@/lib/session'
 import type { Meeting } from '@/lib/types'
 
@@ -37,14 +39,7 @@ interface DashData {
   attendance_quarter: number | null
 }
 
-const PERIODS = [
-  { value: 'this_month', label: 'This month' },
-  { value: 'last_month', label: 'Last month' },
-  { value: 'this_quarter', label: 'This quarter' },
-  { value: 'this_year', label: 'This year' },
-  { value: 'all', label: 'All time' },
-  { value: 'custom', label: 'Custom range' },
-]
+const PERIOD_VALUES = MEMBER_PERIODS.map((p) => p.value)
 
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 
@@ -132,19 +127,24 @@ function StatCard({ label, value, prev, money, icon, to, extra }: { label: strin
 export default function Dashboard() {
   const me = useMe().data?.member
   const [params, setParams] = useSearchParams()
-  const period = params.get('period') ?? 'this_month'
-  const custom = period === 'custom'
-  const from = params.get('from') ?? todayISO().slice(0, 8) + '01'
-  const to = params.get('to') ?? todayISO()
+  const [sel, setSel] = useSavedPeriod('member', PERIOD_VALUES)
+  // A link that names a period (e.g. the monthly summary notification) picks it, like choosing it here.
+  const linked = params.get('period')
+  useEffect(() => {
+    if (!linked) return
+    setSel({ period: linked, ...(params.get('from') ? { from: params.get('from')! } : {}), ...(params.get('to') ? { to: params.get('to')! } : {}) })
+    setParams({}, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linked])
+  const period = sel.period
   const [chartMode, setChartMode] = useState<'count' | 'money'>('count')
+  const qp = periodParams(sel)
   const q = useQuery({
-    queryKey: ['dashboard', period, custom ? from : '', custom ? to : ''],
-    queryFn: () => api.get<DashData>('dashboard', custom ? { period, from, to } : { period }),
+    queryKey: ['dashboard', qp],
+    queryFn: () => api.get<DashData>('dashboard', qp),
     placeholderData: (p) => p,
   })
   const d = q.data
-  const setPeriod = (p: string) => setParams(p === 'this_month' ? {} : p === 'custom' ? { period: p, from, to } : { period: p }, { replace: true })
-  const setDate = (k: 'from' | 'to', v: string) => v && setParams({ period: 'custom', from, to, [k]: v }, { replace: true })
 
   return (
     <div className="page">
@@ -153,23 +153,7 @@ export default function Dashboard() {
           <p className="text-[14px] font-medium text-ink-600">{greeting()},</p>
           <h1 className="page-title">{firstName(me?.full_name)}</h1>
         </div>
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-end">
-          <div className="sm:w-48">
-            <Select aria-label="Period" value={period} onChange={(e) => setPeriod(e.target.value)} className="h-11">
-              {PERIODS.map((p) => (
-                <option key={p.value} value={p.value}>
-                  {p.label}
-                </option>
-              ))}
-            </Select>
-          </div>
-          {custom && (
-            <div className="grid grid-cols-2 gap-2">
-              <Input aria-label="From" type="date" value={from} max={to} onChange={(e) => setDate('from', e.target.value)} className="h-11" />
-              <Input aria-label="To" type="date" value={to} min={from} onChange={(e) => setDate('to', e.target.value)} className="h-11" />
-            </div>
-          )}
-        </div>
+        <PeriodPicker sel={sel} onChange={setSel} />
       </div>
 
       {d?.next_meeting && <NextMeeting m={d.next_meeting} />}
@@ -193,8 +177,8 @@ export default function Dashboard() {
           <motion.div variants={listVariants} initial="hidden" animate="show" className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
             <StatCard label="Referrals given" value={d.cards.referrals_given} prev={d.prev?.referrals_given} icon={<ArrowUpRight className="h-4 w-4" />} to="/app/referrals?tab=given" />
             <StatCard label="Referrals received" value={d.cards.referrals_received} prev={d.prev?.referrals_received} icon={<ArrowDownLeft className="h-4 w-4" />} to="/app/referrals?tab=received" />
-            <StatCard label="Business received" value={d.cards.business_received} prev={d.prev?.business_received} money icon={<IndianRupee className="h-4 w-4" />} to="/app/referrals?tab=closed" />
-            <StatCard label="Business given" value={d.cards.business_given} prev={d.prev?.business_given} money icon={<HeartHandshake className="h-4 w-4" />} to="/app/referrals?tab=closed" />
+            <StatCard label="Business received" value={d.cards.business_received} prev={d.prev?.business_received} money icon={<IndianRupee className="h-4 w-4" />} to="/app/referrals?tab=closed&side=received" />
+            <StatCard label="Business given" value={d.cards.business_given} prev={d.prev?.business_given} money icon={<HeartHandshake className="h-4 w-4" />} to="/app/referrals?tab=closed&side=given" />
             <StatCard
               label="121s done"
               value={d.cards.ones_done}
