@@ -36,16 +36,18 @@ export default function AdminOverview() {
   const q = useQuery({ queryKey: ['admin', 'overview', range.from, range.to], queryFn: () => api.get<Overview>('admin/overview', { from: range.from, to: range.to }), placeholderData: (p) => p })
   const d = q.data
   const s = d?.stats
+  // Each box opens the list behind its number, filtered to the same period.
+  const link = (path: string, q: Record<string, string>) => `${path}?${new URLSearchParams({ ...q, from: range.from, to: range.to })}`
   const cards = s
     ? [
-        { l: 'Total members', v: s.members_total },
-        { l: 'Active members', v: s.members_active },
+        { l: 'Total members', v: s.members_total, to: '/admin/members?status=approved&role=member' },
+        { l: 'Active members', v: s.members_active, to: link('/admin/members', { active: '1' }) },
         { l: 'Pending applications', v: s.pending_applications, to: '/admin/applications', hot: s.pending_applications > 0 },
-        { l: 'Referrals passed', v: s.referrals_given },
-        { l: 'Est. business referred', v: s.business_referred, money: true },
-        { l: 'Confirmed business closed', v: s.business_closed, money: true, dark: true },
-        { l: 'Completed 121s', v: s.ones_done },
-        { l: 'Visitors → joined', v: s.visitors_invited, extra: `${s.visitors_joined} joined${s.visitors_invited ? ` · ${Math.round((s.visitors_joined / s.visitors_invited) * 100)}%` : ''}` },
+        { l: 'Referrals passed', v: s.referrals_given, to: link('/admin/records', { type: 'referrals', kind: 'referral', live: '1', view: 'Referrals passed' }) },
+        { l: 'Est. business referred', v: s.business_referred, money: true, to: link('/admin/records', { type: 'referrals', kind: 'referral', live: '1', view: 'Estimated business referred' }) },
+        { l: 'Confirmed business closed', v: s.business_closed, money: true, dark: true, to: link('/admin/records', { type: 'referrals', status: 'won', by: 'won', live: '1', view: 'Confirmed business closed' }) },
+        { l: 'Completed 121s', v: s.ones_done, to: link('/admin/records', { type: '121s', status: 'completed', view: 'Completed 121s' }) },
+        { l: 'Visitors → joined', v: s.visitors_invited, extra: `${s.visitors_joined} joined${s.visitors_invited ? ` · ${Math.round((s.visitors_joined / s.visitors_invited) * 100)}%` : ''}`, to: link('/admin/records', { type: 'visitors', view: 'Visitors invited' }) },
       ]
     : []
 
@@ -77,7 +79,7 @@ export default function AdminOverview() {
                   </div>
                 </>
               )
-              const cls = `block h-full rounded-card p-4 ${c.dark ? 'bg-ink-950 text-white' : 'card'} ${c.hot ? 'ring-2 ring-gold-500' : ''}`
+              const cls = `block h-full rounded-card p-4 transition hover:-translate-y-0.5 hover:shadow-md ${c.dark ? 'bg-ink-950 text-white' : 'card'} ${c.hot ? 'ring-2 ring-gold-500' : ''}`
               return (
                 <motion.div key={c.l} variants={itemVariants} className="h-full">
                   {c.to ? (

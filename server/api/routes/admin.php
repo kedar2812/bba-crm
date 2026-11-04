@@ -5,20 +5,29 @@
 
 /* ---------------------------- Overview ---------------------------- */
 
+/**
+ * Members who did something in a date range: gave or received a referral, completed a 121, or invited a visitor.
+ * Shared by the Overview count and the Members list it links to, so the two always agree.
+ */
+function active_members_sql($from, $to)
+{
+    $toDt = $to . ' 23:59:59';
+    return array("SELECT giver_id AS mid FROM referrals WHERE is_void = 0 AND referral_date BETWEEN ? AND ?
+        UNION SELECT receiver_id FROM referrals WHERE is_void = 0 AND referral_date BETWEEN ? AND ?
+        UNION SELECT requester_id FROM one_to_ones WHERE status = 'completed' AND meeting_at BETWEEN ? AND ?
+        UNION SELECT partner_id FROM one_to_ones WHERE status = 'completed' AND meeting_at BETWEEN ? AND ?
+        UNION SELECT invited_by FROM visitors WHERE invited_date BETWEEN ? AND ?",
+        array($from, $to, $from, $to, $from . ' 00:00:00', $toDt, $from . ' 00:00:00', $toDt, $from, $to));
+}
+
 route('GET', 'admin/overview', function () {
     require_admin();
     list($from, $to) = range_from_query();
     $s = stats_for(null, $from, $to);
     $s['members_total'] = (int) val("SELECT COUNT(*) FROM members WHERE status = 'approved' AND role = 'member'");
     $s['pending_applications'] = (int) val("SELECT COUNT(*) FROM members WHERE status = 'pending_review'");
-    $toDt = $to . ' 23:59:59';
-    $active = all("SELECT giver_id AS mid FROM referrals WHERE is_void = 0 AND referral_date BETWEEN ? AND ?
-        UNION SELECT receiver_id FROM referrals WHERE is_void = 0 AND referral_date BETWEEN ? AND ?
-        UNION SELECT requester_id FROM one_to_ones WHERE status = 'completed' AND meeting_at BETWEEN ? AND ?
-        UNION SELECT partner_id FROM one_to_ones WHERE status = 'completed' AND meeting_at BETWEEN ? AND ?
-        UNION SELECT invited_by FROM visitors WHERE invited_date BETWEEN ? AND ?",
-        array($from, $to, $from, $to, $from . ' 00:00:00', $toDt, $from . ' 00:00:00', $toDt, $from, $to));
-    $s['members_active'] = count($active);
+    list($activeSql, $activeParams) = active_members_sql($from, $to);
+    $s['members_active'] = count(all($activeSql, $activeParams));
 
     $cb = chart_buckets($from, $to, val('SELECT MIN(referral_date) FROM referrals'));
     $trend = array();
@@ -166,6 +175,11 @@ route('GET', 'admin/members', function () {
     if (qs('role')) {
         $where[] = 'm.role = ?';
         $params[] = qs('role');
+    }
+    if (qs('active') === '1' && qs('from') && qs('to')) {
+        list($activeSql, $activeParams) = active_members_sql(qs('from'), qs('to'));
+        $where[] = 'm.id IN (' . $activeSql . ')';
+        $params = array_merge($params, $activeParams);
     }
     $sort = qs('sort', 'name');
     $sorts = array('name' => 'm.full_name ASC', 'joined' => 'm.approved_at DESC', 'login' => 'm.last_login_at DESC', 'business' => 'business_given DESC', 'referrals' => 'referrals_given DESC');
@@ -405,8 +419,17 @@ route('GET', 'admin/records', function () {
     if (qs('disputed') === '1') {
         $where[] = 'r.is_disputed = 1 AND r.is_void = 0';
     }
+    if (qs('kind') === 'referral' || qs('kind') === 'direct') {
+        $where[] = 'r.type = ?';
+        $p[] = qs('kind');
+    }
+    if (qs('live') === '1') {
+        // Same rule as the Overview totals: void and disputed records never count.
+        $where[] = 'r.is_void = 0 AND r.is_disputed = 0';
+    }
     if ($from && $to) {
-        $where[] = 'r.referral_date BETWEEN ? AND ?';
+        // Closed business is dated by when it was won; everything else by the referral date.
+        $where[] = (qs('by') === 'won' ? 'r.won_date' : 'r.referral_date') . ' BETWEEN ? AND ?';
         array_push($p, $from, $to);
     }
     if (qs('q')) {
@@ -415,13 +438,14 @@ route('GET', 'admin/records', function () {
         array_push($p, $like, $like, $like);
     }
     $w = ' WHERE ' . implode(' AND ', $where);
-    $total = (int) val('SELECT COUNT(*) FROM referrals r' . $w, $p);
+    $sums = one("SELECT COUNT(*) AS n, COALESCE(SUM(r.estimated_value), 0) AS est, COALESCE(SUM(CASE WHEN r.status = 'won' THEN r.final_value ELSE 0 END), 0) AS won FROM referrals r" . $w, $p);
+    $total = (int) $sums['n'];
     $rows = all(referral_select() . $w . ' ORDER BY r.id DESC LIMIT ' . $per . ' OFFSET ' . $off, $p);
     $items = array();
     foreach ($rows as $r) {
         $items[] = referral_shape($r);
     }
-    ok(array('items' => $items, 'total' => $total, 'page' => $page, 'per_page' => $per));
+    ok(array('items' => $items, 'total' => $total, 'page' => $page, 'per_page' => $per, 'sum_estimated' => (float) $sums['est'], 'sum_won' => (float) $sums['won']));
 });
 
 route('POST', 'admin/records/update', function () {

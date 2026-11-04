@@ -12,7 +12,7 @@ npm install
 php -d extension=pdo_sqlite server/tools/seed.php     # dev data: 25 members, 80 referrals… (local only)
 npm run api                                            # PHP API on :8080
 npm run dev                                            # app on http://localhost:5173 (proxies /api)
-node tests/api.e2e.mjs                                 # 191 end-to-end API checks (needs a fresh seed: delete _private/data first)
+node tests/api.e2e.mjs                                 # 204 end-to-end API checks (needs a fresh seed: delete _private/data first)
 ```
 Local config: `server/api/_private/config.secrets.php` (mail is logged, OTPs written to `_private/logs/otp.log`).
 The seed creates throwaway local-only accounts (see `server/tools/seed.php`); none of them exist on the live site.

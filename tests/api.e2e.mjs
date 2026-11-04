@@ -394,6 +394,25 @@ async function main() {
   r = await admin.get('admin/overview', { from: monthAgo, to: today })
   check('admin trend follows the range', r.data.trend_grain === 'week' && r.data.trend.reduce((s, x) => s + x.referrals, 0) === r.data.stats.referrals_given, [r.data.trend_grain, r.data.stats.referrals_given])
 
+  // Overview boxes open lists that must agree with their numbers (same period, same rules).
+  for (const [from, to] of [[monthAgo, today], ['2000-01-01', '2999-12-31']]) {
+    const st = (await admin.get('admin/overview', { from, to })).data.stats
+    const span = from === monthAgo ? 'month' : 'all time'
+    const refs = (await admin.get('admin/records', { type: 'referrals', kind: 'referral', live: 1, from, to })).data
+    check(`Referrals passed box matches its list (${span})`, refs.total === st.referrals_given, [refs.total, st.referrals_given])
+    check(`Est. business box matches its list total (${span})`, Math.round(refs.sum_estimated) === Math.round(st.business_referred), [refs.sum_estimated, st.business_referred])
+    const won = (await admin.get('admin/records', { type: 'referrals', status: 'won', by: 'won', live: 1, from, to })).data
+    check(`Business closed box matches its list total (${span})`, Math.round(won.sum_won) === Math.round(st.business_closed), [won.sum_won, st.business_closed])
+    const ones = (await admin.get('admin/records', { type: '121s', status: 'completed', from, to })).data
+    check(`Completed 121s box matches its list (${span})`, ones.total === st.ones_done, [ones.total, st.ones_done])
+    const vis = (await admin.get('admin/records', { type: 'visitors', from, to })).data
+    check(`Visitors box matches its list (${span})`, vis.total === st.visitors_invited, [vis.total, st.visitors_invited])
+    const act = (await admin.get('admin/members', { active: 1, from, to })).data
+    check(`Active members box matches its list (${span})`, act.length === st.members_active, [act.length, st.members_active])
+  }
+  const allMembers = (await admin.get('admin/members', { status: 'approved', role: 'member' })).data
+  check('Total members box matches its list', allMembers.length === (await admin.get('admin/overview', { from: today, to: today })).data.stats.members_total, allMembers.length)
+
   // ---------------------------------------------------------------- other screens
   console.log('\nOther endpoints')
   for (const [c, p, params] of [

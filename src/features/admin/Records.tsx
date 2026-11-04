@@ -1,5 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CalendarCheck, ClipboardList, IndianRupee, Search } from 'lucide-react'
+import { CalendarCheck, ClipboardList, IndianRupee, Search, X } from 'lucide-react'
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -7,7 +7,7 @@ import { MemberPicker } from '@/components/MemberPicker'
 import { Sheet } from '@/components/Sheet'
 import { Button, Checkbox, EmptyState, ErrorState, Input, ListSkeleton, MoneyInput, Segmented, Select, StatusPill } from '@/components/ui'
 import { api, errorMessage, fieldErrors } from '@/lib/api'
-import { fmtDate, fmtDateTime, inr } from '@/lib/format'
+import { fmtDate, fmtDateTime, inr, inrCompact } from '@/lib/format'
 import { useDebounced } from '@/lib/session'
 import type { Paged, Referral } from '@/lib/types'
 import { Add121, AddBusiness } from './AdminAdd'
@@ -74,7 +74,14 @@ export default function AdminRecords() {
   const [params, setParams] = useSearchParams()
   const type = (['referrals', '121s', 'visitors', 'testimonials'].includes(params.get('type') ?? '') ? params.get('type') : 'referrals') as Type
   const disputed = params.get('disputed') === '1'
-  const [status, setStatus] = useState('')
+  const [status, setStatus] = useState(params.get('status') ?? '')
+  // Filters carried over from an Overview card, so the list matches the number that was clicked.
+  const from = params.get('from') ?? ''
+  const to = params.get('to') ?? ''
+  const kind = params.get('kind') ?? ''
+  const live = params.get('live') === '1'
+  const by = params.get('by') ?? ''
+  const view = params.get('view') ?? ''
   const [member, setMember] = useState<number | null>(null)
   const [search, setSearch] = useState(params.get('q') ?? '')
   const [page, setPage] = useState(1)
@@ -83,8 +90,21 @@ export default function AdminRecords() {
   const q = useDebounced(search, 250)
   const qc = useQueryClient()
   const list = useQuery({
-    queryKey: ['admin', 'records', type, status, member, disputed, q, page],
-    queryFn: () => api.get<Paged<Referral | OneRow | VisRow | TestRow>>('admin/records', { type, status, member_id: member, disputed: disputed ? 1 : '', q, page }),
+    queryKey: ['admin', 'records', type, status, member, disputed, q, page, from, to, kind, live, by],
+    queryFn: () =>
+      api.get<Paged<Referral | OneRow | VisRow | TestRow> & { sum_estimated?: number; sum_won?: number }>('admin/records', {
+        type,
+        status,
+        member_id: member,
+        disputed: disputed ? 1 : '',
+        q,
+        page,
+        from,
+        to,
+        kind,
+        live: live ? 1 : '',
+        by,
+      }),
     placeholderData: keepPreviousData,
   })
   const act = useMutation({
@@ -164,6 +184,27 @@ export default function AdminRecords() {
         <div className="relative mt-2">
           <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
           <input className="field h-11 pl-10" placeholder="Search code, client or requirement" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }} />
+        </div>
+      )}
+
+      {from && to && (
+        <div className="mt-3 flex items-start gap-3 rounded-field bg-gold-100/70 px-3.5 py-2.5">
+          <div className="min-w-0 flex-1 text-[13.5px] leading-snug text-ink-800">
+            <p>
+              <span className="font-semibold">{view || 'Filtered records'}</span> · {from === '2000-01-01' ? 'all time' : `${fmtDate(from)} – ${fmtDate(to)}`}
+            </p>
+            {data && (
+              <p className="text-[12.5px] text-ink-600">
+                {data.total} record{data.total === 1 ? '' : 's'}
+                {type === 'referrals' && by === 'won' && data.sum_won !== undefined && ` · ${inrCompact(data.sum_won)} closed`}
+                {type === 'referrals' && by !== 'won' && data.sum_estimated !== undefined && ` · ${inrCompact(data.sum_estimated)} estimated`}
+                {live && ' · void and disputed records not counted'}
+              </p>
+            )}
+          </div>
+          <Button size="sm" variant="ghost" icon={<X className="h-4 w-4" />} onClick={() => setType(type)}>
+            Show all
+          </Button>
         </div>
       )}
 

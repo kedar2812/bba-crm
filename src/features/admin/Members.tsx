@@ -1,10 +1,10 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { Search, Users } from 'lucide-react'
+import { Search, Users, X } from 'lucide-react'
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Avatar, EmptyState, ErrorState, ListSkeleton, Select, StatusPill } from '@/components/ui'
+import { Link, useSearchParams } from 'react-router-dom'
+import { Avatar, Button, EmptyState, ErrorState, ListSkeleton, Select, StatusPill } from '@/components/ui'
 import { api, errorMessage } from '@/lib/api'
-import { fmtShortDate, inrCompact, relTime } from '@/lib/format'
+import { fmtDate, fmtShortDate, inrCompact, relTime } from '@/lib/format'
 import { useDebounced } from '@/lib/session'
 import { InviteButton, PendingInvites } from './Invites'
 import { AdminTitle } from './shared'
@@ -29,17 +29,37 @@ interface Row {
 
 export default function AdminMembers() {
   const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('')
-  const [role, setRole] = useState('')
+  const [params, setParams] = useSearchParams()
+  const [status, setStatus] = useState(params.get('status') ?? '')
+  const [role, setRole] = useState(params.get('role') ?? '')
   const [sort, setSort] = useState('name')
+  // "Active members" from the Overview: members who did something in that period.
+  const active = params.get('active') === '1' && !!params.get('from') && !!params.get('to')
+  const from = active ? params.get('from') ?? '' : ''
+  const to = active ? params.get('to') ?? '' : ''
   const q = useDebounced(search, 250)
-  const list = useQuery({ queryKey: ['admin', 'members', q, status, role, sort], queryFn: () => api.get<Row[]>('admin/members', { q, status, role, sort }), placeholderData: keepPreviousData })
+  const list = useQuery({
+    queryKey: ['admin', 'members', q, status, role, sort, from, to],
+    queryFn: () => api.get<Row[]>('admin/members', { q, status, role, sort, active: active ? 1 : '', from, to }),
+    placeholderData: keepPreviousData,
+  })
   const rows = list.data ?? []
 
   return (
     <div className="page max-w-6xl">
       <AdminTitle title="Members" sub={list.data ? `${rows.length} member${rows.length === 1 ? '' : 's'}` : undefined} action={<InviteButton />} />
       <PendingInvites />
+      {active && (
+        <div className="mb-3 flex items-start gap-3 rounded-field bg-gold-100/70 px-3.5 py-2.5">
+          <p className="min-w-0 flex-1 text-[13.5px] leading-snug text-ink-800">
+            <span className="font-semibold">Active members</span> · {from === '2000-01-01' ? 'all time' : `${fmtDate(from)} – ${fmtDate(to)}`}
+            <span className="block text-[12.5px] text-ink-600">Gave or received a referral, completed a 121, or invited a visitor in this period.</span>
+          </p>
+          <Button size="sm" variant="ghost" icon={<X className="h-4 w-4" />} onClick={() => setParams({}, { replace: true })}>
+            Show all
+          </Button>
+        </div>
+      )}
       <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto_auto]">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
