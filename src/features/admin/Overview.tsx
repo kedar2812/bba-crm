@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'
 import { Avatar, CountUp, ErrorState, Segmented, Skeleton, itemVariants, listVariants } from '@/components/ui'
 import { api, errorMessage } from '@/lib/api'
 import { inrCompact, waLink } from '@/lib/format'
+import { AdminAddCard } from './AdminAdd'
 import { AdminTitle, useRangePicker } from './shared'
 
 const Chart = lazy(() => import('../dashboard/Chart'))
@@ -51,6 +52,7 @@ export default function AdminOverview() {
   return (
     <div className="page">
       <AdminTitle title="Overview" sub="Association-wide numbers. Totals count each deal once." action={picker} />
+      <AdminAddCard />
       {q.isError && !d && <ErrorState message={errorMessage(q.error)} onRetry={() => q.refetch()} />}
       {!d && !q.isError && (
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -66,15 +68,18 @@ export default function AdminOverview() {
               const body = (
                 <>
                   <p className={`text-[12.5px] font-semibold ${c.dark ? 'text-white/60' : 'text-ink-600'}`}>{c.l}</p>
-                  <p className={`mt-2 font-display text-[24px] font-bold leading-none ${c.dark ? 'text-gold-300' : ''}`}>
-                    <CountUp value={c.v} format={c.money ? inrCompact : undefined} />
-                  </p>
-                  {c.extra && <p className="mt-1.5 text-[12px] text-ink-600">{c.extra}</p>}
+                  {/* The extra note sits on the number's line so every card keeps the same height. */}
+                  <div className="mt-2 flex items-baseline gap-2">
+                    <p className={`font-display text-[24px] font-bold leading-none ${c.dark ? 'text-gold-300' : ''}`}>
+                      <CountUp value={c.v} format={c.money ? inrCompact : undefined} />
+                    </p>
+                    {c.extra && <p className="truncate text-[12px] text-ink-600">{c.extra}</p>}
+                  </div>
                 </>
               )
-              const cls = `block rounded-card p-4 ${c.dark ? 'bg-ink-950 text-white' : 'card'} ${c.hot ? 'ring-2 ring-gold-500' : ''}`
+              const cls = `block h-full rounded-card p-4 ${c.dark ? 'bg-ink-950 text-white' : 'card'} ${c.hot ? 'ring-2 ring-gold-500' : ''}`
               return (
-                <motion.div key={c.l} variants={itemVariants}>
+                <motion.div key={c.l} variants={itemVariants} className="h-full">
                   {c.to ? (
                     <Link to={c.to} className={cls}>
                       {body}

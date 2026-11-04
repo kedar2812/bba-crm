@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, KeyRound, Shield, ShieldOff, UserCheck, UserX } from 'lucide-react'
+import { ArrowLeft, CalendarCheck, IndianRupee, KeyRound, Shield, ShieldOff, UserCheck, UserX } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -9,6 +9,7 @@ import { api, errorMessage, fieldErrors } from '@/lib/api'
 import { fmtDate, fmtDateTime, inr, inrCompact, relTime } from '@/lib/format'
 import { useCategories, useMe } from '@/lib/session'
 import type { OneToOne, Referral, Visitor } from '@/lib/types'
+import { Add121, AddBusiness } from './AdminAdd'
 import { useRangePicker } from './shared'
 
 interface Detail {
@@ -37,6 +38,7 @@ export default function AdminMemberDetail() {
     placeholderData: (prev) => prev,
   })
   const [tab, setTab] = useState<'edit' | 'records'>('edit')
+  const [adding, setAdding] = useState<null | 'received' | 'given' | '121'>(null)
   const [biz, setBiz] = useState<'received' | 'generated' | 'referrals'>('received')
   const [v, setV] = useState<Record<string, string>>({})
   const [offers, setOffers] = useState<string[]>([])
@@ -136,6 +138,22 @@ export default function AdminMemberDetail() {
             </div>
           ))}
         </div>
+        {m.status === 'approved' && m.role !== 'admin' && (
+          <div className="mt-4 rounded-[12px] bg-gold-100/60 p-3">
+            <p className="mb-2 text-[13px] text-ink-800">Enter for {m.full_name} (if they didn't log it themselves):</p>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" icon={<IndianRupee className="h-4 w-4" />} onClick={() => setAdding('received')}>
+                Business received
+              </Button>
+              <Button size="sm" variant="secondary" icon={<IndianRupee className="h-4 w-4" />} onClick={() => setAdding('given')}>
+                Business given
+              </Button>
+              <Button size="sm" variant="secondary" icon={<CalendarCheck className="h-4 w-4" />} onClick={() => setAdding('121')}>
+                Add 121
+              </Button>
+            </div>
+          </div>
+        )}
         <div className="mt-4 flex flex-wrap gap-2">
           {m.status === 'approved' && !isSelf && (
             <Button size="sm" variant="outline" icon={<UserX className="h-4 w-4" />} onClick={() => confirm(`Deactivate ${m.full_name}? They will be logged out and hidden from the directory.`) && act.mutate({ path: 'admin/members/status', body: { status: 'deactivated' } })}>
@@ -301,6 +319,8 @@ export default function AdminMemberDetail() {
           </section>
         </div>
       )}
+      <AddBusiness open={adding === 'received' || adding === 'given'} onClose={() => setAdding(null)} onDone={() => setAdding(null)} receiver={adding === 'received' ? Number(m.id) : null} giver={adding === 'given' ? Number(m.id) : null} />
+      <Add121 open={adding === '121'} onClose={() => setAdding(null)} onDone={() => setAdding(null)} member={Number(m.id)} />
     </div>
   )
 }
