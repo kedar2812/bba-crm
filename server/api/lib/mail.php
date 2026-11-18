@@ -12,10 +12,12 @@ require_once API_ROOT . '/vendor/phpmailer/SMTP.php';
 use PHPMailer\PHPMailer\PHPMailer;
 
 /**
+ * @param string|string[] $to one address, or several (each sees the others)
  * @return bool true on success
  */
 function send_mail($to, $subject, $heading, $paragraphs, $button = null)
 {
+    $to = array_values(array_filter((array) $to));
     $html = email_html($heading, $paragraphs, $button);
     $text = $heading . "\n\n" . implode("\n\n", array_map('strip_tags', $paragraphs));
     if ($button) {
@@ -23,7 +25,7 @@ function send_mail($to, $subject, $heading, $paragraphs, $button = null)
     }
 
     if (config('MAIL_DRIVER', 'mail') === 'log') {
-        log_line('mail', 'TO ' . $to . ' | ' . $subject . ' | ' . $text);
+        log_line('mail', 'TO ' . implode(', ', $to) . ' | ' . $subject . ' | ' . $text);
         return true;
     }
 
@@ -52,7 +54,9 @@ function send_mail($to, $subject, $heading, $paragraphs, $button = null)
         if ($reply && filter_var($reply, FILTER_VALIDATE_EMAIL)) {
             $mail->addReplyTo($reply);
         }
-        $mail->addAddress($to);
+        foreach ($to as $addr) {
+            $mail->addAddress($addr);
+        }
         $mail->Subject = $subject;
         $mail->isHTML(true);
         $mail->Body = $html;
@@ -60,7 +64,7 @@ function send_mail($to, $subject, $heading, $paragraphs, $button = null)
         $mail->send();
         return true;
     } catch (Exception $e) {
-        log_line('mail', 'FAILED to ' . $to . ': ' . $mail->ErrorInfo . ' ' . $e->getMessage());
+        log_line('mail', 'FAILED to ' . implode(', ', $to) . ': ' . $mail->ErrorInfo . ' ' . $e->getMessage());
         return false;
     }
 }
@@ -75,12 +79,12 @@ function resend_send($to, $subject, $html, $text)
 {
     $key = (string) config('RESEND_API_KEY', '');
     if ($key === '') {
-        log_line('mail', 'FAILED to ' . $to . ': RESEND_API_KEY is not set');
+        log_line('mail', 'FAILED to ' . implode(', ', $to) . ': RESEND_API_KEY is not set');
         return false;
     }
     $payload = array(
         'from' => mail_from_name() . ' <' . config('MAIL_FROM', 'no-reply@bbanetworking.com') . '>',
-        'to' => array($to),
+        'to' => $to,
         'subject' => $subject,
         'html' => $html,
         'text' => $text,
@@ -93,7 +97,7 @@ function resend_send($to, $subject, $html, $text)
     if ($status >= 200 && $status < 300) {
         return true;
     }
-    log_line('mail', 'FAILED to ' . $to . ': Resend HTTP ' . $status . ' ' . substr((string) $body, 0, 300));
+    log_line('mail', 'FAILED to ' . implode(', ', $to) . ': Resend HTTP ' . $status . ' ' . substr((string) $body, 0, 300));
     return false;
 }
 

@@ -71,7 +71,7 @@ export interface Referral {
   direction?: 'given' | 'received'
 }
 
-export interface ReferralEvent {
+interface ReferralEvent {
   id: number
   kind: 'created' | 'status' | 'note' | 'edit' | 'dispute' | 'resolve'
   from_status: RefStatus | null
@@ -88,7 +88,7 @@ export interface ReferralDetail extends Referral {
   can: { status: boolean; edit: boolean; dispute: boolean; note: boolean; proof: boolean }
 }
 
-export type OneStatus = 'requested' | 'scheduled' | 'awaiting_confirmation' | 'completed' | 'declined' | 'cancelled'
+type OneStatus = 'requested' | 'scheduled' | 'awaiting_confirmation' | 'completed' | 'declined' | 'cancelled'
 
 export interface OneToOne {
   id: number

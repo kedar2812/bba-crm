@@ -3,6 +3,8 @@ import {
   Bell,
   CalendarDays,
   ClipboardList,
+  ClipboardPenLine,
+  DatabaseBackup,
   FileBarChart,
   Handshake,
   Home,
@@ -41,7 +43,7 @@ const memberNav: NavItem[] = [
   { to: '/app/profile', label: 'My Profile', icon: <User className="h-5 w-5" /> },
 ]
 
-function adminNav(pending: number): NavItem[] {
+function adminNav(pending: number, visitNew: number): NavItem[] {
   return [
     { to: '/admin', label: 'Overview', icon: <LayoutDashboard className="h-5 w-5" />, end: true },
     { to: '/admin/applications', label: 'Applications', icon: <Inbox className="h-5 w-5" />, badge: pending },
@@ -49,13 +51,15 @@ function adminNav(pending: number): NavItem[] {
     { to: '/admin/records', label: 'Records', icon: <ClipboardList className="h-5 w-5" /> },
     { to: '/admin/meetings', label: 'Meetings', icon: <CalendarDays className="h-5 w-5" /> },
     { to: '/admin/reports', label: 'Reports', icon: <FileBarChart className="h-5 w-5" /> },
+    { to: '/admin/visitor-form', label: 'Visitor form', icon: <ClipboardPenLine className="h-5 w-5" />, badge: visitNew },
     { to: '/admin/settings', label: 'Settings', icon: <Settings className="h-5 w-5" /> },
+    { to: '/admin/backup', label: 'Backup', icon: <DatabaseBackup className="h-5 w-5" /> },
     { to: '/admin/audit', label: 'Audit Log', icon: <ScrollText className="h-5 w-5" /> },
     { to: '/admin/account', label: 'Account', icon: <KeyRound className="h-5 w-5" /> },
   ]
 }
 
-export function PageFallback() {
+function PageFallback() {
   return (
     <div className="page space-y-4">
       <Skeleton className="h-8 w-48" />
@@ -149,7 +153,7 @@ export function Shell({ mode }: { mode: 'member' | 'admin' }) {
   const qa = useQuickAdd()
   const nav = useNavigate()
   const loc = useLocation()
-  const items = mode === 'admin' ? adminNav(pending) : memberNav
+  const items = mode === 'admin' ? adminNav(pending, unread.data?.visit_new ?? 0) : memberNav
 
   useEffect(() => {
     window.scrollTo(0, 0)

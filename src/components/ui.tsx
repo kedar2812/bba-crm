@@ -199,6 +199,28 @@ export function Disclosure({ title, children, defaultOpen = false }: { title: st
   )
 }
 
+/** On/off switch with a label (and optional hint) to its left. */
+export function Switch({ checked, onChange, label, hint }: { checked: boolean; onChange: (v: boolean) => void; label: string; hint?: ReactNode }) {
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <div className="min-w-0">
+        <p className="text-[14.5px] font-semibold">{label}</p>
+        {hint && <p className="mt-0.5 text-[13px] text-ink-600">{hint}</p>}
+      </div>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        onClick={() => onChange(!checked)}
+        className={cx('relative mt-0.5 h-7 w-12 shrink-0 rounded-full transition-colors', checked ? 'bg-gold-500' : 'bg-ink-950/15')}
+      >
+        <motion.span animate={{ x: checked ? 20 : 0 }} transition={{ type: 'spring', bounce: 0, duration: 0.25 }} className="absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow" />
+      </button>
+    </div>
+  )
+}
+
 export function Checkbox({ checked, onChange, children, error }: { checked: boolean; onChange: (v: boolean) => void; children: ReactNode; error?: string }) {
   return (
     <div>
@@ -250,6 +272,7 @@ const pillStyles: Record<string, string> = {
   scheduled: 'bg-info/10 text-info',
   awaiting_confirmation: 'bg-transparent text-gold-700 ring-1 ring-inset ring-gold-500',
   completed: 'bg-success/15 text-success',
+  confirmed: 'bg-gold-100 text-gold-700',
   declined: 'bg-danger/10 text-danger',
   cancelled: 'bg-ink-950/[.06] text-ink-400',
   invited: 'bg-info/10 text-info',
@@ -268,7 +291,7 @@ const pillStyles: Record<string, string> = {
 
 const pillLabels: Record<string, string> = {
   new: 'New', contacted: 'Contacted', in_progress: 'In Progress', won: 'Won', lost: 'Lost', pending: 'Pending', disputed: 'Disputed', void: 'Voided',
-  requested: 'Requested', scheduled: 'Scheduled', awaiting_confirmation: 'Unconfirmed', completed: 'Completed', declined: 'Declined', cancelled: 'Cancelled',
+  requested: 'Requested', scheduled: 'Scheduled', confirmed: 'Confirmed', awaiting_confirmation: 'Unconfirmed', completed: 'Completed', declined: 'Declined', cancelled: 'Cancelled',
   invited: 'Invited', attended: 'Attended', joined: 'Joined', not_interested: 'Not interested', present: 'Present', absent: 'Absent', substitute: 'Substitute',
   approved: 'Active', pending_review: 'Pending review', rejected: 'Rejected', deactivated: 'Inactive', admin: 'Admin',
 }
@@ -427,14 +450,6 @@ export function ProgressBar({ value, max }: { value: number; max: number }) {
   )
 }
 
-export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
-  return (
-    <div className="mb-3 mt-7 flex items-center justify-between">
-      <h2 className="text-[17px] font-bold">{children}</h2>
-      {action}
-    </div>
-  )
-}
 
 /** Stagger children on first mount only. */
 export const listVariants = {

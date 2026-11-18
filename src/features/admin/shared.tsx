@@ -1,12 +1,12 @@
 import { Input, Select } from '@/components/ui'
 import { useSavedPeriod } from '@/lib/period'
 
-export type Range = { from: string; to: string; label: string }
+type Range = { from: string; to: string; label: string }
 
 const pad = (n: number) => String(n).padStart(2, '0')
 const iso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 
-export function rangeFor(kind: string): Range {
+function rangeFor(kind: string): Range {
   const now = new Date()
   const y = now.getFullYear()
   const m = now.getMonth()

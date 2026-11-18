@@ -8,8 +8,9 @@ import { DASHBOARD_ORIGIN, IS_MAIN_SITE } from './lib/config'
 import { queryClient } from './lib/session'
 import './styles/index.css'
 
-// The main domain only serves the landing page; every app route lives on the dashboard subdomain.
-const onAppRoute = IS_MAIN_SITE && window.location.pathname !== '/' && window.location.pathname !== '/index.html'
+// The main domain serves the landing page and the visitor form; every app route lives on the dashboard subdomain.
+const SITE_PAGES = ['/', '/index.html', '/visit', '/visit/']
+const onAppRoute = IS_MAIN_SITE && !SITE_PAGES.includes(window.location.pathname)
 if (onAppRoute) {
   window.location.replace(DASHBOARD_ORIGIN + window.location.pathname + window.location.search)
 } else {

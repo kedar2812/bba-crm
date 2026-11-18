@@ -1,5 +1,4 @@
 const inrFmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 })
-const numFmt = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 })
 
 export function inr(n: number | null | undefined) {
   return inrFmt.format(Number(n) || 0)
@@ -15,9 +14,6 @@ export function inrCompact(n: number | null | undefined) {
   return inr(v)
 }
 
-export function num(n: number | null | undefined) {
-  return numFmt.format(Number(n) || 0)
-}
 
 /** Parse "YYYY-MM-DD" or "YYYY-MM-DD HH:mm:ss" (IST, from the server) as local time. */
 export function parseDate(s: string | null | undefined): Date | null {
@@ -104,12 +100,6 @@ export function greeting() {
   return 'Good evening'
 }
 
-/** Indian digit grouping for a raw numeric string: "1250000" → "12,50,000" */
-export function groupIndian(raw: string) {
-  const digits = raw.replace(/\D/g, '').replace(/^0+(?=\d)/, '')
-  if (!digits) return ''
-  return numFmt.format(Number(digits))
-}
 
 export function waLink(mobile: string) {
   return `https://wa.me/91${mobile.replace(/\D/g, '').slice(-10)}`

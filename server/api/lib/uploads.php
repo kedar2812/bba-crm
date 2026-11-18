@@ -1,6 +1,8 @@
 <?php
 /**
- * File uploads: avatars (public, images only) and proofs (private, images + PDF).
+ * File uploads. Public: avatars (uploads/avatars), the visitor-form QR (uploads/site).
+ * Private (_private/uploads): join photos awaiting review (tmp), 121 photos (121),
+ * referral proofs (proofs), visitor-form attachments (visit).
  * MIME is checked with finfo, never trusted from the client; filenames are random.
  */
 
@@ -39,6 +41,15 @@ function image_types()
 function public_root()
 {
     return dirname(API_ROOT);
+}
+
+/** Give a public upload folder the same "nothing here executes" .htaccess as uploads/avatars. */
+function upload_guard($dir)
+{
+    $guard = public_root() . '/uploads/avatars/.htaccess';
+    if (!is_file($dir . '/.htaccess') && is_file($guard)) {
+        @copy($guard, $dir . '/.htaccess');
+    }
 }
 
 /** Save an avatar straight into the public folder. Returns the relative path. */

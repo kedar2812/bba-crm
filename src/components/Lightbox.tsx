@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type PointerEvent as RPointerEvent } from 
 import { createPortal } from 'react-dom'
 import { cx } from './ui'
 
-export interface LightboxImage {
+interface LightboxImage {
   src: string
   /** URL that downloads the file (served with Content-Disposition: attachment). */
   download: string

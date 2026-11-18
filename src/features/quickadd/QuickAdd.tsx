@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useMemo, useState, type ReactNo
 import { Sheet } from '@/components/Sheet'
 import { GiveReferralForm, InviteVisitorForm, Log121Form, Request121Form, ThankYouForm } from './forms'
 
-export type QuickKind = 'referral' | 'thanks' | '121' | 'request121' | 'visitor'
+type QuickKind = 'referral' | 'thanks' | '121' | 'request121' | 'visitor'
 interface Prefill {
   memberId?: number
 }

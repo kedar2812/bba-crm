@@ -1,27 +1,17 @@
 import '@fontsource-variable/anek-gujarati/wdth.css'
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import { useState, type CSSProperties, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Logo } from '@/components/Brand'
 import { api } from '@/lib/api'
 import { appHref } from '@/lib/config'
 import { fmtClock, inr, parseDate } from '@/lib/format'
+import { GOLD, GOLD_INK, HEAD, LEDGER, SIGN, FAMILY } from './style'
 
 /*
- * Landing page — a shopfront signboard.
- * Black condensed lettering on marigold is the look of a bazaar signboard, and it is
- * also BBA's own black-and-gold. The client's tagline is the signboard; each word
- * carries one live fact. Everything below the sign stays quiet.
- * One family throughout: Anek Gujarati (Ek Type), condensed for the sign, normal for reading.
+ * Landing page — a shopfront signboard (see ./style.ts). The client's tagline is the
+ * signboard; each word carries one live fact. Everything below the sign stays quiet.
  */
-
-const FAMILY = "'Anek Gujarati Variable', system-ui, sans-serif"
-const SIGN: CSSProperties = { fontFamily: FAMILY, fontStretch: '75%', fontWeight: 800 }
-const HEAD: CSSProperties = { fontFamily: FAMILY, fontStretch: '88%', fontWeight: 700, letterSpacing: '-0.015em' }
-
-const GOLD = '#E0A82E'
-const LEDGER = '#F3E6C8'
-const GOLD_INK = '#7A5500'
 
 interface Content {
   hero_sub: string
@@ -30,6 +20,7 @@ interface Content {
   contact_phone: string
   contact_address: string
   instagram_handle: string
+  visit_open: boolean
   next_meeting: { title: string; meeting_date: string; start_time: string; venue: string | null } | null
 }
 
@@ -104,6 +95,21 @@ function JoinButton({ tone = 'dark' }: { tone?: 'dark' | 'gold' }) {
       }`}
     >
       I want to join BBA
+    </motion.a>
+  )
+}
+
+/** Come to a meeting before joining: bbanetworking.com/visit (shown while the form is open). */
+function VisitButton({ tone = 'dark' }: { tone?: 'dark' | 'light' }) {
+  return (
+    <motion.a
+      href="/visit"
+      whileTap={{ scale: 0.97 }}
+      className={`inline-flex h-14 items-center justify-center rounded-[6px] border-2 px-7 text-[17px] font-semibold transition-colors ${
+        tone === 'dark' ? 'border-black bg-white/30 text-black hover:bg-black hover:text-[#E0A82E]' : 'border-[#E0A82E] text-[#E0A82E] hover:bg-[#E0A82E] hover:text-black'
+      }`}
+    >
+      Attend as a visitor
     </motion.a>
   )
 }
@@ -230,8 +236,9 @@ export default function Landing() {
           <SignRow i={2} word="Business" fact={business > 0 ? <>{rupeesInWords(business)} of work has passed between members so far.</> : 'Every rupee of work members pass to each other is recorded.'} />
           </div>
 
-          <motion.div className="flex flex-col gap-3 pb-12 pt-6 sm:flex-row md:pb-20" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.85 }}>
+          <motion.div className="flex flex-col gap-3 pb-12 pt-6 sm:flex-row sm:flex-wrap md:pb-20" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.85 }}>
             <JoinButton />
+            {c?.visit_open && <VisitButton />}
             <MemberButton />
           </motion.div>
         </div>
@@ -339,9 +346,11 @@ export default function Landing() {
               </li>
             ))}
           </ol>
-          <div className="mt-14 flex flex-col sm:flex-row">
+          <div className="mt-14 flex flex-col gap-3 sm:flex-row">
             <JoinButton />
+            {c?.visit_open && <VisitButton />}
           </div>
+          {c?.visit_open && <p className="mt-4 max-w-[52ch] text-[16px] leading-[1.5] text-black/60">Not sure yet? Come to a meeting as a visitor first and see how it works.</p>}
         </section>
         <InstagramSection handle={c?.instagram_handle ?? ''} />
       </main>
@@ -358,8 +367,9 @@ export default function Landing() {
               {next.venue ? `. ${next.venue}` : ''}.
             </p>
           )}
-          <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             <JoinButton tone="gold" />
+            {c?.visit_open && <VisitButton tone="light" />}
             <MemberButton tone="light" />
           </div>
 

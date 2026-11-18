@@ -24,6 +24,7 @@ require __DIR__ . '/lib/mail.php';
 require __DIR__ . '/lib/otp.php';
 require __DIR__ . '/lib/uploads.php';
 require __DIR__ . '/lib/periods.php';
+require __DIR__ . '/lib/zip.php';
 
 $ROUTES = array('GET' => array(), 'POST' => array());
 
@@ -44,13 +45,16 @@ try {
     $pos = strpos($uri, '/api/');
     $path = $pos === false ? '' : trim(substr($uri, $pos + 5), '/');
 
-    // CORS for the public landing page on the main domain (read-only public endpoints).
-    if (strpos($path, 'public/') === 0 && isset($_SERVER['HTTP_ORIGIN'])) {
+    // public/* serves the landing page and the visitor form on the main domain: no login, no session.
+    $isPublic = strpos($path, 'public/') === 0;
+    if ($isPublic && isset($_SERVER['HTTP_ORIGIN'])) {
         $origin = $_SERVER['HTTP_ORIGIN'];
         if (in_array($origin, (array) config('CORS_ORIGINS', array()), true)) {
             header('Access-Control-Allow-Origin: ' . $origin);
             // The app's fetch() always sends credentials; without this the browser drops the response.
             header('Access-Control-Allow-Credentials: true');
+            header('Access-Control-Allow-Methods: GET, POST');
+            header('Access-Control-Allow-Headers: Content-Type, X-CSRF-Token');
             header('Vary: Origin');
         }
     }
@@ -69,8 +73,7 @@ try {
 
     $handler = $ROUTES[$method][$path][0];
     $opts = $ROUTES[$method][$path][1];
-    $isPublicGet = $method === 'GET' && strpos($path, 'public/') === 0;
-    if (!$isPublicGet) {
+    if (!$isPublic) {
         start_session();
     }
     if ($method === 'POST' && (!isset($opts['csrf']) || $opts['csrf'])) {

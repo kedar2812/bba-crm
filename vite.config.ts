@@ -16,6 +16,8 @@ export default defineConfig({
     target: 'es2018',
     outDir: 'dist/app',
     emptyOutDir: true,
+    // SheetJS (~500 kB) is its own chunk, loaded only when an admin exports to Excel.
+    chunkSizeWarningLimit: 520,
     rollupOptions: {
       output: {
         manualChunks(id) {

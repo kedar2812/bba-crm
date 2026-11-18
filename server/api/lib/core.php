@@ -526,11 +526,6 @@ function money_fmt($n)
     return ($neg ? '-' : '') . '₹' . $n;
 }
 
-function date_fmt($d)
-{
-    return $d ? date('j M Y', strtotime($d)) : '';
-}
-
 function app_url($path = '')
 {
     return rtrim(config('APP_URL', ''), '/') . $path;

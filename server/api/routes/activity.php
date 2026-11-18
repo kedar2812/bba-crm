@@ -126,6 +126,7 @@ route('GET', 'notifications/unread-count', function () {
     $out = array('unread' => (int) val('SELECT COUNT(*) FROM notifications WHERE member_id = ? AND read_at IS NULL', array($me['id'])));
     if ($me['role'] === 'admin') {
         $out['pending_applications'] = (int) val("SELECT COUNT(*) FROM members WHERE status = 'pending_review'");
+        $out['visit_new'] = (int) val("SELECT COUNT(*) FROM visit_requests WHERE status = 'new'");
     }
     ok($out);
 });

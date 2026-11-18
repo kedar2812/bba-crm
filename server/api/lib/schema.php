@@ -8,7 +8,7 @@
 
 function schema_version()
 {
-    return 7;
+    return 8;
 }
 
 function ddl($sql)
@@ -56,7 +56,7 @@ function run_migrations()
         flock($lock, LOCK_EX);
     }
     $done = applied_migrations();
-    $list = array('m001_base', 'm002_seed', 'm003_landing_copy', 'm004_invites', 'm005_instagram_feed', 'm006_one_photos', 'm007_attendance_substitute');
+    $list = array('m001_base', 'm002_seed', 'm003_landing_copy', 'm004_invites', 'm005_instagram_feed', 'm006_one_photos', 'm007_attendance_substitute', 'm008_visit_form');
     foreach ($list as $m) {
         if (in_array($m, $done, true)) {
             continue;
@@ -441,6 +441,32 @@ function m006_one_photos()
 function m007_attendance_substitute()
 {
     q("UPDATE attendance SET status = 'substitute' WHERE status = 'excused'");
+}
+
+/** Public "Attend as a visitor" form: its responses, and the form itself (one JSON setting). */
+function m008_visit_form()
+{
+    ddl('CREATE TABLE IF NOT EXISTS visit_requests (
+        id {ID},
+        code VARCHAR(20) NULL UNIQUE,
+        name VARCHAR(120) NOT NULL,
+        mobile VARCHAR(20) NOT NULL,
+        email VARCHAR(190) NULL,
+        answers_json MEDIUMTEXT NOT NULL,
+        meeting_id {FK} NULL,
+        status VARCHAR(16) NOT NULL DEFAULT \'new\',
+        admin_note TEXT NULL,
+        ip VARCHAR(45) NULL,
+        created_at DATETIME, updated_at DATETIME
+    ){OPTS}');
+    foreach (array('status', 'mobile', 'created_at') as $col) {
+        try {
+            db()->exec('CREATE INDEX idx_visit_requests_' . $col . ' ON visit_requests (' . $col . ')');
+        } catch (Exception $e) {
+            // already exists
+        }
+    }
+    // The form itself lives in settings.visit_form, written on the first admin save (defaults until then).
 }
 
 function ensure_first_admin()

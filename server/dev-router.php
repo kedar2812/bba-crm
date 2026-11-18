@@ -5,8 +5,12 @@ if (strpos($path, '/api/') === 0) {
     require __DIR__ . '/api/index.php';
     return true;
 }
-if (strpos($path, '/uploads/') === 0 && is_file(__DIR__ . $path)) {
-    return false;
+// Serve uploads from server/uploads (the built-in server's docroot is wherever it was started).
+if (preg_match('#^/uploads/[a-z0-9_-]+/[A-Za-z0-9._-]+\.(png|jpe?g|webp|gif)$#', $path) && is_file(__DIR__ . $path)) {
+    $types = array('png' => 'image/png', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'webp' => 'image/webp', 'gif' => 'image/gif');
+    header('Content-Type: ' . $types[strtolower(pathinfo($path, PATHINFO_EXTENSION))]);
+    readfile(__DIR__ . $path);
+    return true;
 }
 http_response_code(404);
 echo 'dev api server';

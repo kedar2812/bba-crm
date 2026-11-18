@@ -119,7 +119,7 @@ export function PasswordInput(props: React.ComponentProps<typeof Input>) {
   )
 }
 
-export function passwordStrength(p: string) {
+function passwordStrength(p: string) {
   let s = 0
   if (p.length >= 8) s++
   if (p.length >= 12) s++

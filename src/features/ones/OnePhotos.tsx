@@ -10,7 +10,7 @@ import { blobName, fitImage } from '@/lib/image'
 import { useRefreshAll } from '@/lib/session'
 import type { OnePhoto } from '@/lib/types'
 
-export const MAX_PHOTOS = 10
+const MAX_PHOTOS = 10
 
 const photoUrl = (id: number) => `${API_BASE}/files/121-photo?id=${id}`
 

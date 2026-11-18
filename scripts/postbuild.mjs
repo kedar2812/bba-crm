@@ -31,6 +31,7 @@ const EXCLUDE = [
   'api/_private/logs/',
   'api/_private/cache/',
   'api/_private/uploads/',
+  'api/_private/backups/',
 ]
 cpSync(join(server, 'api'), join(dash, 'api'), {
   recursive: true,

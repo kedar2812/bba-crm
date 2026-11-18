@@ -16,7 +16,7 @@ type Box = 'given' | 'received' | 'closed'
 type Side = 'received' | 'given'
 const PERIOD_VALUES = MEMBER_PERIODS.map((p) => p.value)
 
-export function ReferralRow({ r }: { r: Referral }) {
+function ReferralRow({ r }: { r: Referral }) {
   const other = r.direction === 'given' ? r.receiver : r.giver
   const value = r.status === 'won' ? r.final_value : r.estimated_value
   return (

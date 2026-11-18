@@ -93,12 +93,6 @@ function me_id()
     return (int) $me['id'];
 }
 
-function is_admin()
-{
-    $me = current_member();
-    return $me && $me['role'] === 'admin';
-}
-
 function login_member($row, $remember)
 {
     session_regenerate_id(true);
@@ -141,12 +135,6 @@ function member_public($m)
         'city' => $m['city'],
         'category' => isset($m['category_name']) ? $m['category_name'] : null,
     );
-}
-
-function member_mini_by_id($id)
-{
-    $m = one('SELECT m.*, c.name AS category_name FROM members m LEFT JOIN categories c ON c.id = m.category_id WHERE m.id = ?', array($id));
-    return member_public($m);
 }
 
 function me_payload($m)

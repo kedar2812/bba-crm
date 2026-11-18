@@ -8,6 +8,7 @@ import { useMe } from './lib/session'
 
 const AppLayout = lazy(() => import('./components/AppLayout'))
 const Landing = lazy(() => import('./features/landing/Landing'))
+const Visit = lazy(() => import('./features/visit/Visit'))
 const Login = lazy(() => import('./features/auth/Login'))
 const Join = lazy(() => import('./features/auth/Join'))
 const Forgot = lazy(() => import('./features/auth/Forgot'))
@@ -33,6 +34,8 @@ const AdminReports = lazy(() => import('./features/admin/Reports'))
 const AdminSettings = lazy(() => import('./features/admin/Settings'))
 const AdminAudit = lazy(() => import('./features/admin/Audit'))
 const AdminAccount = lazy(() => import('./features/admin/Account'))
+const AdminVisitorForm = lazy(() => import('./features/admin/VisitorForm'))
+const AdminBackup = lazy(() => import('./features/admin/Backup'))
 
 function Splash() {
   return (
@@ -95,61 +98,61 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthEvents />
-        <Suspense fallback={<Splash />}>
-          <Routes>
-            <Route path="/" element={IS_DASHBOARD && !import.meta.env.DEV ? <Navigate to="/app" replace /> : <Landing />} />
-            <Route path="/join" element={<Join />} />
-            <Route path="/invite/:token" element={<Join />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/forgot-password" element={<Forgot />} />
-            <Route
-              path="/app"
-              element={
-                <RequireMember>
-                  <AppLayout mode="member" />
-                </RequireMember>
-              }
-            >
-              <Route index element={<Dashboard />} />
-              <Route path="referrals" element={<Referrals />} />
-              <Route path="referrals/:code" element={<ReferralDetail />} />
-              <Route path="121s" element={<Ones />} />
-              <Route path="directory" element={<Directory />} />
-              <Route path="members/:id" element={<MemberProfile />} />
-              <Route path="visitors" element={<Visitors />} />
-              <Route path="meetings" element={<Meetings />} />
-              <Route path="notifications" element={<Notifications />} />
-              <Route path="profile" element={<Profile />} />
-              <Route path="more" element={<More />} />
-              <Route path="*" element={<NotFound />} />
-            </Route>
-            <Route
-              path="/admin"
-              element={
-                <RequireMember admin>
-                  <AppLayout mode="admin" />
-                </RequireMember>
-              }
-            >
-              <Route index element={<AdminOverview />} />
-              <Route path="applications" element={<AdminApplications />} />
-              <Route path="members" element={<AdminMembers />} />
-              <Route path="members/:id" element={<AdminMemberDetail />} />
-              <Route path="records" element={<AdminRecords />} />
-              <Route path="meetings" element={<AdminMeetings />} />
-              <Route path="reports" element={<AdminReports />} />
-              <Route path="settings" element={<AdminSettings />} />
-              <Route path="audit" element={<AdminAudit />} />
-              <Route path="notifications" element={<Notifications />} />
-              <Route path="account" element={<AdminAccount />} />
-              <Route path="*" element={<NotFound />} />
-            </Route>
-            <Route
-              path="*"
-element={<NotFound />}
-            />
-          </Routes>
-        </Suspense>
+      <Suspense fallback={<Splash />}>
+        <Routes>
+          <Route path="/" element={IS_DASHBOARD && !import.meta.env.DEV ? <Navigate to="/app" replace /> : <Landing />} />
+          <Route path="/visit" element={<Visit />} />
+          <Route path="/join" element={<Join />} />
+          <Route path="/invite/:token" element={<Join />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<Forgot />} />
+          <Route
+            path="/app"
+            element={
+              <RequireMember>
+                <AppLayout mode="member" />
+              </RequireMember>
+            }
+          >
+            <Route index element={<Dashboard />} />
+            <Route path="referrals" element={<Referrals />} />
+            <Route path="referrals/:code" element={<ReferralDetail />} />
+            <Route path="121s" element={<Ones />} />
+            <Route path="directory" element={<Directory />} />
+            <Route path="members/:id" element={<MemberProfile />} />
+            <Route path="visitors" element={<Visitors />} />
+            <Route path="meetings" element={<Meetings />} />
+            <Route path="notifications" element={<Notifications />} />
+            <Route path="profile" element={<Profile />} />
+            <Route path="more" element={<More />} />
+            <Route path="*" element={<NotFound />} />
+          </Route>
+          <Route
+            path="/admin"
+            element={
+              <RequireMember admin>
+                <AppLayout mode="admin" />
+              </RequireMember>
+            }
+          >
+            <Route index element={<AdminOverview />} />
+            <Route path="applications" element={<AdminApplications />} />
+            <Route path="members" element={<AdminMembers />} />
+            <Route path="members/:id" element={<AdminMemberDetail />} />
+            <Route path="records" element={<AdminRecords />} />
+            <Route path="meetings" element={<AdminMeetings />} />
+            <Route path="reports" element={<AdminReports />} />
+            <Route path="settings" element={<AdminSettings />} />
+            <Route path="visitor-form" element={<AdminVisitorForm />} />
+            <Route path="backup" element={<AdminBackup />} />
+            <Route path="audit" element={<AdminAudit />} />
+            <Route path="notifications" element={<Notifications />} />
+            <Route path="account" element={<AdminAccount />} />
+            <Route path="*" element={<NotFound />} />
+          </Route>
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   )
 }

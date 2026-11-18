@@ -10,7 +10,7 @@ import { useRefreshAll } from '@/lib/session'
 import type { Meeting } from '@/lib/types'
 
 /** Shared submit plumbing: field errors from the server, toasts, refresh. */
-export function useFormSubmit<T>(path: string, onSuccess: (data: T) => void) {
+function useFormSubmit<T>(path: string, onSuccess: (data: T) => void) {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const refresh = useRefreshAll()
   const m = useMutation({

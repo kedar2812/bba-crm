@@ -1,7 +1,7 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { inr, inrCompact } from '@/lib/format'
 
-export interface ChartRow {
+interface ChartRow {
   label: string
   [k: string]: number | string
 }

@@ -27,7 +27,7 @@ export function useMe() {
 export function useUnread(enabled: boolean) {
   return useQuery({
     queryKey: ['unread'],
-    queryFn: () => api.get<{ unread: number; pending_applications?: number }>('notifications/unread-count'),
+    queryFn: () => api.get<{ unread: number; pending_applications?: number; visit_new?: number }>('notifications/unread-count'),
     enabled,
     refetchInterval: 60_000,
     refetchIntervalInBackground: false,

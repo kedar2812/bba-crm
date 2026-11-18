@@ -31,6 +31,8 @@ route('GET', 'public/content', function () {
     $next = one('SELECT id, title, meeting_date, start_time, venue, online_link FROM meetings WHERE meeting_date >= ? ORDER BY meeting_date, start_time LIMIT 1', array(today()));
     $out['instagram_handle'] = instagram_handle_clean($out['instagram_handle']);
     $out['next_meeting'] = $next;
+    $visit = visit_form();
+    $out['visit_open'] = $visit['enabled'];
     ok($out);
 }, array('public' => true));
 
@@ -45,10 +47,6 @@ route('GET', 'public/trades', function () {
         WHERE m.status = 'approved' AND m.role = 'member' AND (c.name IS NOT NULL OR m.category_other IS NOT NULL)
         GROUP BY COALESCE(NULLIF(m.category_other, ''), c.name) ORDER BY n DESC, name");
     ok($rows);
-}, array('public' => true));
-
-route('GET', 'public/next-meeting', function () {
-    ok(one('SELECT id, title, meeting_date, start_time, venue, online_link FROM meetings WHERE meeting_date >= ? ORDER BY meeting_date, start_time LIMIT 1', array(today())));
 }, array('public' => true));
 
 /**
@@ -256,10 +254,7 @@ function instagram_save_cover($permalink, $id)
     if (!is_dir($dir)) {
         @mkdir($dir, 0755, true);
     }
-    $guard = public_root() . '/uploads/avatars/.htaccess';
-    if (!is_file($dir . '/.htaccess') && is_file($guard)) {
-        @copy($guard, $dir . '/.htaccess');
-    }
+    upload_guard($dir);
     if (@file_put_contents($dir . '/' . $id . '.jpg', $bytes) === false) {
         return null;
     }
