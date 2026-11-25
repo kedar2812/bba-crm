@@ -35,7 +35,7 @@ const SUMMARY_LABELS: Record<string, string> = {
   new_members: 'New members',
   meetings_held: 'Meetings held',
   referrals_given: 'Referrals passed',
-  business_referred: 'Est. business referred (₹)',
+  referrals_won: 'Referrals passed that converted',
   business_closed: 'Confirmed business closed (₹)',
   ones_done: 'Completed 121s',
   visitors_invited: 'Visitors invited',

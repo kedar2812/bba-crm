@@ -92,7 +92,7 @@ export default function AdminRecords() {
   const list = useQuery({
     queryKey: ['admin', 'records', type, status, member, disputed, q, page, from, to, kind, live, by],
     queryFn: () =>
-      api.get<Paged<Referral | OneRow | VisRow | TestRow> & { sum_estimated?: number; sum_won?: number }>('admin/records', {
+      api.get<Paged<Referral | OneRow | VisRow | TestRow> & { sum_won?: number }>('admin/records', {
         type,
         status,
         member_id: member,
@@ -197,7 +197,6 @@ export default function AdminRecords() {
               <p className="text-[12.5px] text-ink-600">
                 {data.total} record{data.total === 1 ? '' : 's'}
                 {type === 'referrals' && by === 'won' && data.sum_won !== undefined && ` · ${inrCompact(data.sum_won)} closed`}
-                {type === 'referrals' && by !== 'won' && data.sum_estimated !== undefined && ` · ${inrCompact(data.sum_estimated)} estimated`}
                 {live && ' · void and disputed records not counted'}
               </p>
             )}

@@ -181,7 +181,8 @@ function stats_for($memberId, $from, $to)
         $out['visitors_invited'] = (int) val('SELECT COUNT(*) FROM visitors WHERE invited_by = ? AND invited_date BETWEEN ? AND ?', array($memberId, $from, $to));
     } else {
         $out['referrals_given'] = (int) val("SELECT COUNT(*) FROM referrals WHERE type = 'referral' AND " . LIVE_REF . ' AND referral_date BETWEEN ? AND ?', array($from, $to));
-        $out['business_referred'] = (float) val("SELECT COALESCE(SUM(estimated_value), 0) FROM referrals WHERE type = 'referral' AND " . LIVE_REF . ' AND referral_date BETWEEN ? AND ?', array($from, $to));
+        // Of the referrals passed in the range, how many have since been won (counted, not summed).
+        $out['referrals_won'] = (int) val("SELECT COUNT(*) FROM referrals WHERE type = 'referral' AND status = 'won' AND " . LIVE_REF . ' AND referral_date BETWEEN ? AND ?', array($from, $to));
         $out['business_closed'] = (float) val("SELECT COALESCE(SUM(final_value), 0) FROM referrals WHERE status = 'won' AND " . LIVE_REF . ' AND won_date BETWEEN ? AND ?', array($from, $to));
         $out['ones_done'] = (int) val("SELECT COUNT(*) FROM one_to_ones WHERE status = 'completed' AND meeting_at BETWEEN ? AND ?", array($from . ' 00:00:00', $toDt));
         $out['visitors_invited'] = (int) val('SELECT COUNT(*) FROM visitors WHERE invited_date BETWEEN ? AND ?', array($from, $to));

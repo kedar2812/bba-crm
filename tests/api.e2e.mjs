@@ -305,7 +305,9 @@ async function main() {
     const span = from === monthAgo ? 'month' : 'all time'
     const refs = (await admin.get('admin/records', { type: 'referrals', kind: 'referral', live: 1, from, to })).data
     check(`Referrals passed box matches its list (${span})`, refs.total === st.referrals_given, [refs.total, st.referrals_given])
-    check(`Est. business box matches its list total (${span})`, Math.round(refs.sum_estimated) === Math.round(st.business_referred), [refs.sum_estimated, st.business_referred])
+    check('Est. business total is gone', !('business_referred' in st) && !('sum_estimated' in refs))
+    const conv = (await admin.get('admin/records', { type: 'referrals', kind: 'referral', status: 'won', live: 1, from, to })).data
+    check(`Referral conversion box matches its list (${span})`, conv.total === st.referrals_won && st.referrals_won <= st.referrals_given, [conv.total, st.referrals_won, st.referrals_given])
     const won = (await admin.get('admin/records', { type: 'referrals', status: 'won', by: 'won', live: 1, from, to })).data
     check(`Business closed box matches its list total (${span})`, Math.round(won.sum_won) === Math.round(st.business_closed), [won.sum_won, st.business_closed])
     const ones = (await admin.get('admin/records', { type: '121s', status: 'completed', from, to })).data

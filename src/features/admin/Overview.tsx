@@ -17,7 +17,7 @@ interface Overview {
     members_active: number
     pending_applications: number
     referrals_given: number
-    business_referred: number
+    referrals_won: number
     business_closed: number
     ones_done: number
     visitors_invited: number
@@ -44,7 +44,13 @@ export default function AdminOverview() {
         { l: 'Active members', v: s.members_active, to: link('/admin/members', { active: '1' }) },
         { l: 'Pending applications', v: s.pending_applications, to: '/admin/applications', hot: s.pending_applications > 0 },
         { l: 'Referrals passed', v: s.referrals_given, to: link('/admin/records', { type: 'referrals', kind: 'referral', live: '1', view: 'Referrals passed' }) },
-        { l: 'Est. business referred', v: s.business_referred, money: true, to: link('/admin/records', { type: 'referrals', kind: 'referral', live: '1', view: 'Estimated business referred' }) },
+        {
+          l: 'Referral conversion',
+          v: s.referrals_given ? Math.round((s.referrals_won / s.referrals_given) * 100) : 0,
+          pct: true,
+          extra: `${s.referrals_won} of ${s.referrals_given} won`,
+          to: link('/admin/records', { type: 'referrals', kind: 'referral', status: 'won', live: '1', view: 'Referrals passed that converted' }),
+        },
         { l: 'Confirmed business closed', v: s.business_closed, money: true, dark: true, to: link('/admin/records', { type: 'referrals', status: 'won', by: 'won', live: '1', view: 'Confirmed business closed' }) },
         { l: 'Completed 121s', v: s.ones_done, to: link('/admin/records', { type: '121s', status: 'completed', view: 'Completed 121s' }) },
         { l: 'Visitors → joined', v: s.visitors_invited, extra: `${s.visitors_joined} joined${s.visitors_invited ? ` · ${Math.round((s.visitors_joined / s.visitors_invited) * 100)}%` : ''}`, to: link('/admin/records', { type: 'visitors', view: 'Visitors invited' }) },
@@ -73,7 +79,7 @@ export default function AdminOverview() {
                   {/* The extra note sits on the number's line so every card keeps the same height. */}
                   <div className="mt-2 flex items-baseline gap-2">
                     <p className={`font-display text-[24px] font-bold leading-none ${c.dark ? 'text-gold-300' : ''}`}>
-                      <CountUp value={c.v} format={c.money ? inrCompact : undefined} />
+                      <CountUp value={c.v} format={c.money ? inrCompact : c.pct ? (n) => `${Math.round(n)}%` : undefined} />
                     </p>
                     {c.extra && <p className="truncate text-[12px] text-ink-600">{c.extra}</p>}
                   </div>

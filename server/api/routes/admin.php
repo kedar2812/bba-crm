@@ -438,14 +438,14 @@ route('GET', 'admin/records', function () {
         array_push($p, $like, $like, $like);
     }
     $w = ' WHERE ' . implode(' AND ', $where);
-    $sums = one("SELECT COUNT(*) AS n, COALESCE(SUM(r.estimated_value), 0) AS est, COALESCE(SUM(CASE WHEN r.status = 'won' THEN r.final_value ELSE 0 END), 0) AS won FROM referrals r" . $w, $p);
+    $sums = one("SELECT COUNT(*) AS n, COALESCE(SUM(CASE WHEN r.status = 'won' THEN r.final_value ELSE 0 END), 0) AS won FROM referrals r" . $w, $p);
     $total = (int) $sums['n'];
     $rows = all(referral_select() . $w . ' ORDER BY r.id DESC LIMIT ' . $per . ' OFFSET ' . $off, $p);
     $items = array();
     foreach ($rows as $r) {
         $items[] = referral_shape($r);
     }
-    ok(array('items' => $items, 'total' => $total, 'page' => $page, 'per_page' => $per, 'sum_estimated' => (float) $sums['est'], 'sum_won' => (float) $sums['won']));
+    ok(array('items' => $items, 'total' => $total, 'page' => $page, 'per_page' => $per, 'sum_won' => (float) $sums['won']));
 });
 
 route('POST', 'admin/records/update', function () {
